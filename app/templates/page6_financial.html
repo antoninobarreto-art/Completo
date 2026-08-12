@@ -1,0 +1,1341 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {% if active_view == 'dojo' %}
+        🥋 DOJOCHO - Gestão Financeira do Dojo
+    {% else %}
+        🥋 DOJOCHO - Informações Financeiras dos Alunos
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+<!-- PAGE HEADER -->
+<div class="page-header">
+    <div>
+        <h1 class="page-title">
+            {% if active_view == 'dojo' %}
+                <i class="fa-solid fa-building-columns" style="color: var(--accent-cyan);"></i> Gestão Financeira & Balanço do Dojo
+            {% else %}
+                <i class="fa-solid fa-user-graduate" style="color: var(--accent-cyan);"></i> Informações Financeiras dos Alunos
+            {% endif %}
+        </h1>
+        <p class="page-subtitle">
+            {% if active_view == 'dojo' %}
+                Controle de custos operacionais, aluguéis de tatame, compras de equipamentos e fluxo de caixa por dojo.
+            {% else %}
+                Gestão individual de mensalidades, inadimplência, taxas de exames e histórico financeiro dos alunos.
+            {% endif %}
+        </p>
+    </div>
+    {% if current_user and current_user.role in ['ADMIN', 'SENSEI'] %}
+    <div style="display: flex; gap: 0.6rem; flex-wrap: wrap;">
+        {% if active_view == 'dojo' %}
+            <button class="btn btn-primary" data-modal="modal-new-dojo-expense">
+                <i class="fa-solid fa-plus"></i> Registrar Despesa / Receita do Dojo
+            </button>
+        {% else %}
+            <!-- Botões removidos conforme solicitado -->
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+{% if current_user and current_user.role in ['ADMIN', 'SENSEI'] %}
+<!-- SUB-NAVBAR / ABAS FINANCEIRAS -->
+<div style="display: flex; gap: 0.8rem; margin-bottom: 1.8rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.8rem;">
+    <a href="/financial?view=students" class="btn {% if active_view == 'students' %}btn-primary{% else %}btn-secondary{% endif %}" style="padding: 0.6rem 1.4rem; font-size: 0.95rem; border-radius: var(--radius-sm);">
+        <i class="fa-solid fa-user-graduate"></i> 1. Informações Financeiras dos Alunos
+    </a>
+    <a href="/financial?view=dojo" class="btn {% if active_view == 'dojo' %}btn-primary{% else %}btn-secondary{% endif %}" style="padding: 0.6rem 1.4rem; font-size: 0.95rem; border-radius: var(--radius-sm);">
+        <i class="fa-solid fa-torii-gate"></i> 2. Gestão Financeira do Dojo
+    </a>
+</div>
+{% endif %}
+
+{% if active_view == 'my_tuition' %}
+<!-- ========================================================= -->
+<!-- PÁGINA DO ALUNO: MINHA SITUAÇÃO FINANCIAL & PIX           -->
+<!-- ========================================================= -->
+
+<!-- KPIS DO ALUNO LOGADO -->
+<div class="grid-3" style="margin-bottom: 2rem;">
+    <div class="card" style="border-left: 4px solid {% if my_status == 'PAID' %}var(--accent-emerald){% elif my_status == 'OVERDUE' %}var(--accent-rose){% else %}var(--accent-amber){% endif %}; background: linear-gradient(135deg, rgba(15, 23, 42, 0.9) 0%, rgba(17, 24, 39, 0.95) 100%);">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+            <span style="font-size: 0.82rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Minha Situação Atual</span>
+            <div style="width: 36px; height: 36px; border-radius: 8px; background: rgba(255, 255, 255, 0.1); display: flex; align-items: center; justify-content: center;">
+                <i class="fa-solid fa-user-shield" style="color: {% if my_status == 'PAID' %}#34d399{% elif my_status == 'OVERDUE' %}#f43f5e{% else %}#f59e0b{% endif %};"></i>
+            </div>
+        </div>
+        <div style="font-size: 1.4rem; font-weight: 800;">
+            {% if my_status == 'PAID' %}
+                <span style="color: #34d399;"><i class="fa-solid fa-circle-check"></i> EM DIA (ADIMPLENTE)</span>
+            {% elif my_status == 'OVERDUE' %}
+                <span style="color: #f43f5e;"><i class="fa-solid fa-circle-exclamation"></i> COBRANÇA ATRASADA</span>
+            {% else %}
+                <span style="color: #f59e0b;"><i class="fa-regular fa-clock"></i> MENSALIDADE PENDENTE</span>
+            {% endif %}
+        </div>
+        <div style="font-size: 0.75rem; color: var(--text-dim); margin-top: 0.25rem;">
+            Praticante: {{ db_user.name }} ({{ db_user.belt_rank }})
+        </div>
+    </div>
+
+    <div class="card" style="border-left: 4px solid var(--accent-amber); background: linear-gradient(135deg, rgba(245, 158, 11, 0.08) 0%, rgba(17, 24, 39, 0.9) 100%);">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+            <span style="font-size: 0.82rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Valor Pendente a Pagar</span>
+            <div style="width: 36px; height: 36px; border-radius: 8px; background: rgba(245, 158, 11, 0.15); display: flex; align-items: center; justify-content: center; color: var(--accent-amber);">
+                <i class="fa-solid fa-hand-holding-dollar"></i>
+            </div>
+        </div>
+        <div style="font-size: 1.8rem; font-weight: 800; color: {% if pending_amount > 0 %}#f59e0b{% else %}#34d399{% endif %}; font-family: 'Outfit', sans-serif;">
+            R$ {{ "%.2f"|format(pending_amount) }}
+        </div>
+        <div style="font-size: 0.75rem; color: var(--text-dim); margin-top: 0.25rem;">
+            {% if pending_amount > 0 %}
+                Pagamento via PIX instantâneo disponível
+            {% else %}
+                Nenhuma pendência financeira
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card" style="border-left: 4px solid var(--accent-cyan); background: linear-gradient(135deg, rgba(6, 182, 212, 0.08) 0%, rgba(17, 24, 39, 0.9) 100%);">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+            <span style="font-size: 0.82rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Total Acumulado Quitado</span>
+            <div style="width: 36px; height: 36px; border-radius: 8px; background: rgba(6, 182, 212, 0.15); display: flex; align-items: center; justify-content: center; color: var(--accent-cyan);">
+                <i class="fa-solid fa-receipt"></i>
+            </div>
+        </div>
+        <div style="font-size: 1.8rem; font-weight: 800; color: #38bdf8; font-family: 'Outfit', sans-serif;">
+            R$ {{ "%.2f"|format(total_paid) }}
+        </div>
+        <div style="font-size: 0.75rem; color: var(--text-dim); margin-top: 0.25rem;">
+            Histórico de mensalidades e taxas
+        </div>
+    </div>
+</div>
+
+<!-- CARD DE AÇÃO PIX SE HOUVER PENDÊNCIA -->
+{% if pending_txs|length > 0 %}
+{% set current_pending = pending_txs[0] %}
+<div class="card" style="margin-bottom: 2rem; border-left: 4px solid var(--accent-emerald); background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(17, 24, 39, 0.95) 100%); padding: 1.5rem;">
+    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <h2 style="font-size: 1.2rem; color: white; display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.4rem;">
+                <i class="fa-solid fa-qrcode" style="color: var(--accent-emerald);"></i> Pague sua Mensalidade via PIX
+            </h2>
+            <p style="font-size: 0.88rem; color: var(--text-muted); margin: 0;">
+                {{ current_pending.description }} — <strong>R$ {{ "%.2f"|format(current_pending.amount) }}</strong> (Vencimento: {{ current_pending.due_date|date_br }})
+            </p>
+        </div>
+        <button class="btn btn-primary" onclick="openPixModal({{ current_pending.id }}, '{{ current_pending.description|replace("'", "\\'") }}', {{ current_pending.amount }}, '{{ current_pending.due_date }}')" style="background: var(--accent-emerald); border-color: var(--accent-emerald); color: white; font-weight: 800; font-size: 1rem; padding: 0.8rem 1.8rem;">
+            <i class="fa-solid fa-qrcode"></i> Exibir QR Code PIX
+        </button>
+    </div>
+</div>
+{% endif %}
+
+<!-- TABELA DE HISTÓRICO INDIVIDUAL DO ALUNO -->
+<div class="card" style="padding: 0; overflow: hidden; margin-bottom: 2rem;">
+    <div style="padding: 1.2rem 1.5rem; border-bottom: 1px solid var(--border-color);">
+        <h2 style="font-size: 1.1rem; display: flex; align-items: center; gap: 0.5rem;">
+            <i class="fa-solid fa-history" style="color: var(--accent-cyan);"></i> Meu Histórico Financeiro ({{ my_txs|length }})
+        </h2>
+    </div>
+    <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
+            <thead>
+                <tr style="background: var(--bg-surface); border-bottom: 1px solid var(--border-color); color: var(--text-muted);">
+                    <th style="padding: 1rem 1.2rem;">Descrição</th>
+                    <th style="padding: 1rem 1.2rem;">Categoria</th>
+                    <th style="padding: 1rem 1.2rem;">Valor (R$)</th>
+                    <th style="padding: 1rem 1.2rem;">Vencimento / Pagamento</th>
+                    <th style="padding: 1rem 1.2rem;">Situação</th>
+                    <th style="padding: 1rem 1.2rem; text-align: right;">Ação</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if my_txs|length == 0 %}
+                <tr>
+                    <td colspan="6" style="padding: 2.5rem; text-align: center; color: var(--text-muted);">
+                        Nenhum registro de mensalidade encontrado para sua conta.
+                    </td>
+                </tr>
+                {% else %}
+                {% for t in my_txs %}
+                <tr style="border-bottom: 1px solid var(--border-color);">
+                    <td style="padding: 1rem 1.2rem; font-weight: 600; color: var(--text-main);">{{ t.description }}</td>
+                    <td style="padding: 1rem 1.2rem;"><span class="badge" style="background: rgba(139, 92, 246, 0.15); color: #c084fc;">{{ t.category }}</span></td>
+                    <td style="padding: 1rem 1.2rem; font-weight: 800; font-family: 'Outfit', sans-serif; color: #34d399;">R$ {{ "%.2f"|format(t.amount) }}</td>
+                    <td style="padding: 1rem 1.2rem; font-size: 0.85rem;">
+                        <div>Venc: {{ t.due_date|date_br }}</div>
+                        {% if t.payment_date %}
+                            <div style="color: var(--accent-emerald); font-size: 0.75rem;">Pago: {{ t.payment_date|date_br }}</div>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 1rem 1.2rem;">
+                        {% if t.status == 'PAID' %}
+                            <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #34d399;"><i class="fa-solid fa-check"></i> PAGO</span>
+                        {% elif t.status == 'OVERDUE' %}
+                            <span class="badge" style="background: rgba(244, 63, 94, 0.15); color: #f43f5e;"><i class="fa-solid fa-exclamation"></i> ATRASADO</span>
+                        {% else %}
+                            <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b;"><i class="fa-regular fa-clock"></i> PENDENTE</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 1rem 1.2rem; text-align: right;">
+                        {% if t.status != 'PAID' %}
+                            <button class="btn btn-primary btn-sm" onclick="openPixModal({{ t.id }}, '{{ t.description|replace("'", "\\'") }}', {{ t.amount }}, '{{ t.due_date }}')" style="background: var(--accent-emerald); border-color: var(--accent-emerald); font-size: 0.75rem;">
+                                <i class="fa-solid fa-qrcode"></i> Pagar PIX
+                            </button>
+                        {% else %}
+                            <span style="font-size: 0.8rem; color: var(--text-muted);"><i class="fa-solid fa-circle-check" style="color: var(--accent-emerald);"></i> Quitado</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% elif active_view == 'students' %}
+<!-- ========================================================= -->
+<!-- PÁGINA 1: INFORMAÇÕES FINANCEIRAS DOS ALUNOS             -->
+<!-- ========================================================= -->
+<!-- ========================================================= -->
+<!-- PÁGINA 1: INFORMAÇÕES FINANCEIRAS DOS ALUNOS             -->
+<!-- ========================================================= -->
+
+<!-- KPIS DOS ALUNOS -->
+<div class="grid-4" style="margin-bottom: 2rem;">
+    <div class="card" style="border-left: 4px solid var(--accent-emerald); background: linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, var(--bg-card) 100%);">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+            <span style="font-size: 0.82rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Mensalidades Arrecadadas</span>
+            <div style="width: 36px; height: 36px; border-radius: 8px; background: rgba(16, 185, 129, 0.15); display: flex; align-items: center; justify-content: center; color: var(--accent-emerald);">
+                <i class="fa-solid fa-cash-register"></i>
+            </div>
+        </div>
+        <div style="font-size: 1.8rem; font-weight: 800; color: #34d399; font-family: 'Outfit', sans-serif;">
+            R$ {{ "%.2f"|format(total_mensalidades_pagas) }}
+        </div>
+        <div style="font-size: 0.75rem; color: var(--text-dim); margin-top: 0.25rem;">
+            <i class="fa-solid fa-circle-check" style="color: var(--accent-emerald);"></i> Quitado pelos alunos
+        </div>
+    </div>
+
+    <div class="card" style="border-left: 4px solid var(--accent-cyan); background: linear-gradient(135deg, rgba(6, 182, 212, 0.08) 0%, var(--bg-card) 100%);">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+            <span style="font-size: 0.82rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Alunos Adimplentes</span>
+            <div style="width: 36px; height: 36px; border-radius: 8px; background: rgba(6, 182, 212, 0.15); display: flex; align-items: center; justify-content: center; color: var(--accent-cyan);">
+                <i class="fa-solid fa-user-check"></i>
+            </div>
+        </div>
+        <div style="font-size: 1.8rem; font-weight: 800; color: #38bdf8; font-family: 'Outfit', sans-serif;">
+            {{ adimplentes_count }} <span style="font-size: 1rem; font-weight: 500; color: var(--text-muted);">/ {{ total_alunos_count }}</span>
+        </div>
+        <div style="font-size: 0.75rem; color: var(--text-dim); margin-top: 0.25rem;">
+            <i class="fa-solid fa-thumbs-up" style="color: var(--accent-cyan);"></i> Com situação regularizada
+        </div>
+    </div>
+
+    <div class="card" style="border-left: 4px solid var(--accent-rose); background: linear-gradient(135deg, rgba(244, 63, 94, 0.08) 0%, var(--bg-card) 100%);">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+            <span style="font-size: 0.82rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Alunos Inadimplentes</span>
+            <div style="width: 36px; height: 36px; border-radius: 8px; background: rgba(244, 63, 94, 0.15); display: flex; align-items: center; justify-content: center; color: var(--accent-rose);">
+                <i class="fa-solid fa-user-xmark"></i>
+            </div>
+        </div>
+        <div style="font-size: 1.8rem; font-weight: 800; color: #f43f5e; font-family: 'Outfit', sans-serif;">
+            {{ inadimplentes_count }} <span style="font-size: 1rem; font-weight: 500; color: var(--text-muted);">alunos</span>
+        </div>
+        <div style="font-size: 0.75rem; color: var(--text-dim); margin-top: 0.25rem;">
+            <i class="fa-solid fa-triangle-exclamation" style="color: var(--accent-rose);"></i> Com cobranças pendentes
+        </div>
+    </div>
+
+    <div class="card" style="border-left: 4px solid var(--accent-amber); background: linear-gradient(135deg, rgba(245, 158, 11, 0.08) 0%, var(--bg-card) 100%);">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+            <span style="font-size: 0.82rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Total a Receber</span>
+            <div style="width: 36px; height: 36px; border-radius: 8px; background: rgba(245, 158, 11, 0.15); display: flex; align-items: center; justify-content: center; color: var(--accent-amber);">
+                <i class="fa-solid fa-hand-holding-dollar"></i>
+            </div>
+        </div>
+        <div style="font-size: 1.8rem; font-weight: 800; color: #f59e0b; font-family: 'Outfit', sans-serif;">
+            R$ {{ "%.2f"|format(total_mensalidades_pendentes) }}
+        </div>
+        <div style="font-size: 0.75rem; color: var(--text-dim); margin-top: 0.25rem;">
+            <i class="fa-solid fa-clock" style="color: var(--accent-amber);"></i> Atrasados e vencimentos
+        </div>
+    </div>
+</div>
+
+<!-- BARRA DE FILTROS ALUNOS -->
+<div class="filter-bar" style="margin-bottom: 1.5rem;">
+    <div class="filter-group" style="flex: 2;">
+        <span class="filter-label"><i class="fa-solid fa-magnifying-glass"></i> Buscar Aluno:</span>
+        <input type="text" id="search-student" class="form-input" placeholder="Buscar aluno por nome, faixa ou dojo..." onkeyup="filterStudentTable()">
+    </div>
+    <div class="filter-group">
+        <span class="filter-label"><i class="fa-solid fa-file-invoice-dollar"></i> Situação:</span>
+        <select class="form-select" onchange="applyUrlFilter('status', this.value)">
+            <option value="ALL" {% if status_filter == 'ALL' %}selected{% endif %}>Todas as Situações</option>
+            <option value="PAID" {% if status_filter == 'PAID' %}selected{% endif %}>Em Dia (Adimplente)</option>
+            <option value="PENDING" {% if status_filter == 'PENDING' %}selected{% endif %}>Pendente</option>
+            <option value="OVERDUE" {% if status_filter == 'OVERDUE' %}selected{% endif %}>Atrasado (Inadimplente)</option>
+        </select>
+    </div>
+    <div class="filter-group">
+        <span class="filter-label"><i class="fa-solid fa-torii-gate"></i> Dojo:</span>
+        <select class="form-select" onchange="applyUrlFilter('dojo', this.value)">
+            <option value="ALL" {% if dojo_filter == 'ALL' %}selected{% endif %}>Todos os Dojos</option>
+            {% for d in dojos %}
+                <option value="{{ d.id }}" {% if dojo_filter == (d.id|string) %}selected{% endif %}>{{ d.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+</div>
+
+<!-- TABELA DE ALUNOS & SITUAÇÃO FINANCIAL -->
+<div class="card" style="padding: 0; overflow: hidden;">
+    <div style="padding: 1.2rem 1.5rem; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between;">
+        <h2 style="font-size: 1.1rem; display: flex; align-items: center; gap: 0.5rem;">
+            <i class="fa-solid fa-users" style="color: var(--accent-cyan);"></i> Alunos & Situação das Mensalidades ({{ student_summaries|length }})
+        </h2>
+    </div>
+
+    <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;" id="student-financial-table">
+            <thead>
+                <tr style="background: var(--bg-surface); border-bottom: 1px solid var(--border-color); color: var(--text-muted);">
+                    <th style="padding: 1rem 1.2rem;">Aluno</th>
+                    <th style="padding: 1rem 1.2rem;">Graduação / Faixa</th>
+                    <th style="padding: 1rem 1.2rem;">Dojo Principal</th>
+                    <th style="padding: 1rem 1.2rem;">Situação Financeira</th>
+                    <th style="padding: 1rem 1.2rem;">Valor Pendente</th>
+                    <th style="padding: 1rem 1.2rem;">Último Pagamento</th>
+                    <th style="padding: 1rem 1.2rem; text-align: right;">Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in student_summaries %}
+                {% set st = item.user %}
+                <tr class="st-row" style="border-bottom: 1px solid var(--border-color); transition: background 0.2s ease;">
+                    <td style="padding: 1rem 1.2rem;">
+                        <div style="display: flex; align-items: center; gap: 0.75rem;">
+                            <img src="{{ st.photo_url or 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100' }}" style="width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 1px solid var(--accent-cyan);">
+                            <div>
+                                <div style="font-weight: 700; color: var(--text-main);">{{ st.name }}</div>
+                                <div style="font-size: 0.75rem; color: var(--text-muted);">{{ st.email }}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td style="padding: 1rem 1.2rem;">
+                        <span class="badge" style="background: rgba(6, 182, 212, 0.15); color: #38bdf8; border: 1px solid rgba(6, 182, 212, 0.3);">
+                            {{ st.belt_rank }}
+                        </span>
+                    </td>
+                    <td style="padding: 1rem 1.2rem; color: var(--text-muted);">
+                        {{ st.dojo.name if st.dojo else 'Geral' }}
+                    </td>
+                    <td style="padding: 1rem 1.2rem;">
+                        {% if item.financial_status == 'PAID' %}
+                            <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4);">
+                                <i class="fa-solid fa-check-circle"></i> EM DIA (ADIMPLENTE)
+                            </span>
+                        {% elif item.financial_status == 'OVERDUE' %}
+                            <span class="badge" style="background: rgba(244, 63, 94, 0.15); color: #f43f5e; border: 1px solid rgba(244, 63, 94, 0.4);">
+                                <i class="fa-solid fa-circle-exclamation"></i> ATRASADO
+                            </span>
+                        {% else %}
+                            <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.4);">
+                                <i class="fa-regular fa-clock"></i> PENDENTE
+                            </span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 1rem 1.2rem; font-weight: 800; font-family: 'Outfit', sans-serif;">
+                        {% if item.pending_amount > 0 %}
+                            <span style="color: #f43f5e;">R$ {{ "%.2f"|format(item.pending_amount) }}</span>
+                        {% else %}
+                            <span style="color: #34d399;">R$ 0.00</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 1rem 1.2rem; font-size: 0.85rem; color: var(--text-muted);">
+                        {{ item.last_payment_date|date_br }}
+                    </td>
+                    <td style="padding: 1rem 1.2rem; text-align: right;">
+                        <div style="display: flex; gap: 0.4rem; justify-content: flex-end;">
+                            {% if item.pending_amount > 0 %}
+                                {% set pending_tx = (item.transactions|selectattr('status', 'ne', 'PAID')|list)[0] %}
+                                {% if pending_tx %}
+                                <form action="/api/financial/{{ pending_tx.id }}/toggle-status" method="POST" style="display: inline;">
+                                    <input type="hidden" name="redirect_view" value="students">
+                                    <button type="submit" class="btn btn-primary btn-sm" style="padding: 0.3rem 0.6rem; font-size: 0.75rem; background: var(--accent-emerald); border-color: var(--accent-emerald);">
+                                        <i class="fa-solid fa-check"></i> Dar Baixa
+                                    </button>
+                                </form>
+                                {% endif %}
+                            {% endif %}
+                            <button class="btn btn-secondary btn-sm" onclick="openStudentHistory('modal-history-{{ st.id }}')" style="padding: 0.3rem 0.6rem; font-size: 0.75rem;">
+                                <i class="fa-solid fa-history"></i> Histórico
+                            </button>
+                        </div>
+
+                        <!-- MODAL HISTÓRICO DO ALUNO (INICIA FECHADO POR PADRÃO) -->
+                        <div id="modal-history-{{ st.id }}" class="modal-backdrop" style="display: none;">
+                            <div class="modal-content" style="max-width: 600px; text-align: left;">
+                                <div class="modal-header">
+                                    <h2><i class="fa-solid fa-history" style="color: var(--accent-cyan);"></i> Histórico Financeiro - {{ st.name }}</h2>
+                                    <button class="modal-close" onclick="closeStudentHistory('modal-history-{{ st.id }}')">&times;</button>
+                                </div>
+                                <div class="modal-body">
+                                    {% if item.transactions|length == 0 %}
+                                        <p style="color: var(--text-muted);">Nenhum lançamento registrado para este aluno.</p>
+                                    {% else %}
+                                        <div style="display: flex; flex-direction: column; gap: 0.8rem;">
+                                            {% for t in item.transactions %}
+                                            <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-color); padding: 0.8rem; border-radius: var(--radius-sm); display: flex; justify-content: space-between; align-items: center;">
+                                                <div>
+                                                    <div style="font-weight: 600; color: white;">{{ t.description }}</div>
+                                                    <div style="font-size: 0.75rem; color: var(--text-muted);">Vencimento: {{ t.due_date|date_br }} | Categoria: {{ t.category }}</div>
+                                                </div>
+                                                <div style="text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 0.3rem;">
+                                                    <div style="font-weight: 800; color: #34d399;">R$ {{ "%.2f"|format(t.amount) }}</div>
+                                                    <div style="display: flex; gap: 0.4rem; align-items: center;">
+                                                        <span class="badge" style="font-size: 0.7rem; padding: 0.2rem 0.5rem; background: {% if t.status == 'PAID' %}rgba(16,185,129,0.2){% else %}rgba(244,63,94,0.2){% endif %}; color: {% if t.status == 'PAID' %}#34d399{% else %}#f43f5e{% endif %};">
+                                                            {{ t.status }}
+                                                        </span>
+                                                        {% if t.status != 'PAID' %}
+                                                            <button type="button" class="btn btn-secondary btn-sm" onclick="openPixModal({{ t.id }}, '{{ t.description|replace("'", "\\'") }}', {{ t.amount }}, '{{ t.due_date }}')" style="padding: 0.2rem 0.4rem; font-size: 0.7rem; color: var(--accent-emerald); border-color: rgba(16, 185, 129, 0.4);" title="Exibir QR Code PIX">
+                                                                <i class="fa-solid fa-qrcode"></i> PIX
+                                                            </button>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" onclick="closeStudentHistory('modal-history-{{ st.id }}')">Fechar</button>
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- BOX DE CRUD DE LANÇAMENTOS E COBRANÇAS DOS ALUNOS -->
+<div class="card" style="padding: 0; overflow: hidden; margin-top: 2rem;">
+    <div style="padding: 1.2rem 1.5rem; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.8rem;">
+        <div>
+            <h2 style="font-size: 1.1rem; display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.2rem;">
+                <i class="fa-solid fa-list-check" style="color: var(--accent-cyan);"></i> Lançamentos dos Alunos ({{ student_txs|length }})
+            </h2>
+            <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0;">Painel de gestão de mensalidades, taxas e cobranças emitidas para alunos.</p>
+        </div>
+    </div>
+
+    {% if student_txs|length == 0 %}
+        <div style="padding: 2.5rem; text-align: center; color: var(--text-muted);">
+            <i class="fa-solid fa-receipt" style="font-size: 2.5rem; margin-bottom: 0.8rem; color: var(--text-dim); display: block;"></i>
+            Nenhuma cobrança de aluno encontrada para os filtros selecionados.
+        </div>
+    {% else %}
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;" id="student-crud-table">
+                <thead>
+                    <tr style="background: var(--bg-surface); border-bottom: 1px solid var(--border-color); color: var(--text-muted);">
+                        <th style="padding: 1rem 1.2rem;">Aluno / Cobrança</th>
+                        <th style="padding: 1rem 1.2rem;">Categoria</th>
+                        <th style="padding: 1rem 1.2rem;">Dojo</th>
+                        <th style="padding: 1rem 1.2rem;">Valor (R$)</th>
+                        <th style="padding: 1rem 1.2rem;">Vencimento / Pago</th>
+                        <th style="padding: 1rem 1.2rem;">Forma Pgto</th>
+                        <th style="padding: 1rem 1.2rem;">Situação Financeira</th>
+                        <th style="padding: 1rem 1.2rem; text-align: right;">Ações CRUD</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for tx in student_txs %}
+                    <tr class="st-crud-row" style="border-bottom: 1px solid var(--border-color); transition: background 0.2s ease;" onmouseover="this.style.background='rgba(255,255,255,0.03)'" onmouseout="this.style.background='transparent'">
+                        <td style="padding: 1rem 1.2rem; font-weight: 600; color: var(--text-main);">
+                            <div>{{ tx.description }}</div>
+                            {% if tx.user %}
+                                <div style="font-size: 0.75rem; color: var(--accent-cyan); font-weight: 500;">
+                                    <i class="fa-solid fa-user"></i> {{ tx.user.name }}
+                                </div>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 1rem 1.2rem;">
+                            <span class="badge" style="background: rgba(139, 92, 246, 0.15); color: #c084fc; border: 1px solid rgba(139, 92, 246, 0.3);">
+                                {{ tx.category }}
+                            </span>
+                        </td>
+                        <td style="padding: 1rem 1.2rem; color: var(--text-muted);">
+                            {{ tx.dojo.name if tx.dojo else 'Geral' }}
+                        </td>
+                        <td style="padding: 1rem 1.2rem; font-weight: 800; font-family: 'Outfit', sans-serif; color: #34d399;">
+                            R$ {{ "%.2f"|format(tx.amount) }}
+                        </td>
+                        <td style="padding: 1rem 1.2rem; font-size: 0.85rem;">
+                            <div>Venc: <strong>{{ tx.due_date|date_br }}</strong></div>
+                            {% if tx.payment_date %}
+                                <div style="font-size: 0.75rem; color: var(--accent-emerald);">Pago: {{ tx.payment_date|date_br }}</div>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 1rem 1.2rem; color: var(--text-muted);">
+                            {{ tx.payment_method or '-' }}
+                        </td>
+                        <td style="padding: 1rem 1.2rem;">
+                            {% if tx.status == 'PAID' %}
+                                <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4);">
+                                    <i class="fa-solid fa-check"></i> PAGO
+                                </span>
+                            {% elif tx.status == 'OVERDUE' %}
+                                <span class="badge" style="background: rgba(244, 63, 94, 0.15); color: #f43f5e; border: 1px solid rgba(244, 63, 94, 0.4);">
+                                    <i class="fa-solid fa-exclamation"></i> ATRASADO
+                                </span>
+                            {% else %}
+                                <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.4);">
+                                    <i class="fa-regular fa-clock"></i> PENDENTE
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 1rem 1.2rem; text-align: right;">
+                            <div style="display: flex; gap: 0.4rem; justify-content: flex-end;">
+                                {% if tx.status != 'PAID' %}
+                                    <button type="button" class="btn btn-secondary btn-sm" onclick="openPixModal({{ tx.id }}, '{{ tx.description|replace("'", "\\'") }}', {{ tx.amount }}, '{{ tx.due_date }}')" style="padding: 0.3rem 0.6rem; font-size: 0.75rem; color: var(--accent-emerald); border-color: rgba(16, 185, 129, 0.4);" title="Exibir QR Code PIX">
+                                        <i class="fa-solid fa-qrcode"></i> PIX
+                                    </button>
+                                {% endif %}
+                                <form action="/api/financial/{{ tx.id }}/toggle-status" method="POST" style="display: inline;">
+                                    <input type="hidden" name="redirect_view" value="students">
+                                    {% if tx.status == 'PAID' %}
+                                        <button type="submit" class="btn btn-secondary btn-sm" title="Marcar como Pendente" style="padding: 0.3rem 0.6rem; font-size: 0.75rem;">
+                                            <i class="fa-solid fa-rotate-left"></i> Estornar
+                                        </button>
+                                    {% else %}
+                                        <button type="submit" class="btn btn-primary btn-sm" title="Marcar como Pago" style="padding: 0.3rem 0.6rem; font-size: 0.75rem; background: var(--accent-emerald); border-color: var(--accent-emerald);">
+                                            <i class="fa-solid fa-check"></i> Dar Baixa
+                                        </button>
+                                    {% endif %}
+                                </form>
+                                <button type="button" class="btn btn-secondary btn-sm" onclick="openEditModal({{ tx.id }}, '{{ tx.description|replace("'", "\\'") }}', {{ tx.amount }}, '{{ tx.type }}', '{{ tx.category }}', '{{ tx.due_date }}', '{{ tx.status }}', '{{ tx.dojo_id or '' }}', '{{ tx.user_id or '' }}', '{{ tx.payment_method or '' }}', '{{ (tx.notes or '')|replace("'", "\\'") }}')" style="padding: 0.3rem 0.6rem; font-size: 0.75rem;" title="Editar Lançamento">
+                                    <i class="fa-solid fa-pen"></i> Editar
+                                </button>
+                                <form action="/api/financial/{{ tx.id }}/delete" method="POST" style="display: inline;" onsubmit="return confirm('Excluir esta cobrança de aluno?');">
+                                    <input type="hidden" name="redirect_view" value="students">
+                                    <button type="submit" class="btn btn-secondary btn-sm" style="padding: 0.3rem 0.6rem; font-size: 0.75rem; color: var(--accent-rose); border-color: rgba(244, 63, 94, 0.3);" title="Excluir">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% endif %}
+</div>
+
+<!-- BOX PAINEL DE GERAÇÃO DE MENSALIDADES EM LOTE -->
+<div class="card" style="margin-top: 2rem; border-left: 4px solid var(--accent-cyan); background: linear-gradient(135deg, rgba(6, 182, 212, 0.06) 0%, var(--bg-card) 100%);">
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.2rem; flex-wrap: wrap; gap: 0.8rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem;">
+        <div>
+            <h2 style="font-size: 1.2rem; color: var(--text-main); display: flex; align-items: center; gap: 0.6rem;">
+                <i class="fa-solid fa-bolt" style="color: var(--accent-cyan);"></i> Gerador de Mensalidades em Lote
+            </h2>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.2rem;">
+                Emita cobranças mensais automatizadas para os alunos ativos com verificação antiduplicidade.
+            </p>
+        </div>
+        <span class="badge" style="background: rgba(6, 182, 212, 0.15); color: var(--accent-cyan); font-size: 0.8rem; padding: 0.4rem 0.8rem;">
+            <i class="fa-solid fa-shield-halved"></i> Proteção Antiduplicidade Ativa
+        </span>
+    </div>
+
+    <form action="/api/financial/generate-monthly-fees" method="POST">
+        <div class="grid-4" style="gap: 1rem; margin-bottom: 1.2rem;">
+            <div class="form-group">
+                <label class="form-label"><i class="fa-regular fa-calendar-days"></i> Mês / Ano Referência *</label>
+                <input type="text" id="batch-month-year" name="month_year" class="form-input" placeholder="Ex: 08/2026" required>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label"><i class="fa-solid fa-dollar-sign"></i> Valor Padrão (R$) *</label>
+                <input type="number" step="0.01" id="batch-amount" name="amount" class="form-input" value="250.00" oninput="updateBatchPreview()" required>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label"><i class="fa-solid fa-torii-gate"></i> Dojo Alvo</label>
+                <select id="batch-dojo-id" name="dojo_id" class="form-select" onchange="updateBatchPreview()">
+                    <option value="ALL" selected>Todos os Dojos ({{ total_alunos_count }} alunos)</option>
+                    {% for d in dojos %}
+                        <option value="{{ d.id }}">{{ d.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label"><i class="fa-regular fa-clock"></i> Dia de Vencimento</label>
+                <select name="due_day" class="form-select">
+                    <option value="05">Dia 05</option>
+                    <option value="10" selected>Dia 10</option>
+                    <option value="15">Dia 15</option>
+                    <option value="20">Dia 20</option>
+                    <option value="25">Dia 25</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- PREVIEW EM TEMPO REAL -->
+        <div style="background: var(--bg-surface); border: 1px solid var(--border-color); padding: 1rem 1.2rem; border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+            <div style="display: flex; align-items: center; gap: 1.5rem;">
+                <div>
+                    <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Alunos Elegíveis:</span>
+                    <div style="font-size: 1.2rem; font-weight: 800; color: var(--text-main);" id="preview-student-count">{{ total_alunos_count }} alunos</div>
+                </div>
+                <div style="border-left: 1px solid var(--border-color); padding-left: 1.5rem;">
+                    <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Total Previsto do Lote:</span>
+                    <div style="font-size: 1.2rem; font-weight: 800; color: #34d399;" id="preview-total-amount">R$ {{ "%.2f"|format(total_alunos_count * 250.0) }}</div>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="background: var(--accent-cyan); border-color: var(--accent-cyan); color: #0f172a; font-weight: 800; padding: 0.7rem 1.5rem;">
+                <i class="fa-solid fa-bolt"></i> Processar e Gerar Mensalidades em Lote
+            </button>
+        </div>
+    </form>
+</div>
+
+{% else %}
+<!-- ========================================================= -->
+<!-- PÁGINA 2: GESTÃO FINANCEIRA DO DOJO                       -->
+<!-- ========================================================= -->
+
+<!-- KPIS DO DOJO E INSTITUIÇÃO -->
+<div class="grid-4" style="margin-bottom: 2rem;">
+    <div class="card" style="border-left: 4px solid var(--accent-emerald); background: linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, var(--bg-card) 100%);">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+            <span style="font-size: 0.82rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Receita Bruta Acumulada</span>
+            <div style="width: 36px; height: 36px; border-radius: 8px; background: rgba(16, 185, 129, 0.15); display: flex; align-items: center; justify-content: center; color: var(--accent-emerald);">
+                <i class="fa-solid fa-chart-line"></i>
+            </div>
+        </div>
+        <div style="font-size: 1.8rem; font-weight: 800; color: #34d399; font-family: 'Outfit', sans-serif;">
+            R$ {{ "%.2f"|format(receita_bruta_dojo) }}
+        </div>
+        <div style="font-size: 0.75rem; color: var(--text-dim); margin-top: 0.25rem;">
+            <i class="fa-solid fa-circle-check" style="color: var(--accent-emerald);"></i> Entradas de todos os dojos
+        </div>
+    </div>
+
+    <div class="card" style="border-left: 4px solid var(--accent-rose); background: linear-gradient(135deg, rgba(244, 63, 94, 0.08) 0%, var(--bg-card) 100%);">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+            <span style="font-size: 0.82rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Despesas Operacionais</span>
+            <div style="width: 36px; height: 36px; border-radius: 8px; background: rgba(244, 63, 94, 0.15); display: flex; align-items: center; justify-content: center; color: var(--accent-rose);">
+                <i class="fa-solid fa-file-invoice"></i>
+            </div>
+        </div>
+        <div style="font-size: 1.8rem; font-weight: 800; color: #f43f5e; font-family: 'Outfit', sans-serif;">
+            R$ {{ "%.2f"|format(despesas_operacionais_dojo) }}
+        </div>
+        <div style="font-size: 0.75rem; color: var(--text-dim); margin-top: 0.25rem;">
+            <i class="fa-solid fa-receipt" style="color: var(--accent-rose);"></i> Aluguel, tatames e custos
+        </div>
+    </div>
+
+    <div class="card" style="border-left: 4px solid var(--accent-cyan); background: linear-gradient(135deg, rgba(6, 182, 212, 0.08) 0%, var(--bg-card) 100%);">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+            <span style="font-size: 0.82rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Lucro Líquido do Dojo</span>
+            <div style="width: 36px; height: 36px; border-radius: 8px; background: rgba(6, 182, 212, 0.15); display: flex; align-items: center; justify-content: center; color: var(--accent-cyan);">
+                <i class="fa-solid fa-piggy-bank"></i>
+            </div>
+        </div>
+        <div style="font-size: 1.8rem; font-weight: 800; color: #38bdf8; font-family: 'Outfit', sans-serif;">
+            R$ {{ "%.2f"|format(lucro_liquido_dojo) }}
+        </div>
+        <div style="font-size: 0.75rem; color: var(--text-dim); margin-top: 0.25rem;">
+            <i class="fa-solid fa-vault" style="color: var(--accent-cyan);"></i> Saldo líquido em caixa
+        </div>
+    </div>
+
+    <div class="card" style="border-left: 4px solid var(--accent-amber); background: linear-gradient(135deg, rgba(245, 158, 11, 0.08) 0%, var(--bg-card) 100%);">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+            <span style="font-size: 0.82rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Despesas Pendentes</span>
+            <div style="width: 36px; height: 36px; border-radius: 8px; background: rgba(245, 158, 11, 0.15); display: flex; align-items: center; justify-content: center; color: var(--accent-amber);">
+                <i class="fa-solid fa-clock-rotate-left"></i>
+            </div>
+        </div>
+        <div style="font-size: 1.8rem; font-weight: 800; color: #f59e0b; font-family: 'Outfit', sans-serif;">
+            R$ {{ "%.2f"|format(despesas_pendentes_dojo) }}
+        </div>
+        <div style="font-size: 0.75rem; color: var(--text-dim); margin-top: 0.25rem;">
+            <i class="fa-solid fa-hourglass-half" style="color: var(--accent-amber);"></i> A pagar nos próximos dias
+        </div>
+    </div>
+</div>
+
+<!-- DEMONSTRATIVO POR DOJO -->
+<div style="margin-bottom: 2rem;">
+    <h2 style="font-size: 1.1rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+        <i class="fa-solid fa-torii-gate" style="color: var(--accent-cyan);"></i> Balanço Financeiro Comparativo por Dojo
+    </h2>
+    <div class="grid-3">
+        {% for b in dojo_financial_breakdown %}
+        <div class="card">
+            <div style="font-weight: 700; font-size: 1.1rem; color: var(--text-main); margin-bottom: 0.6rem; display: flex; align-items: center; justify-content: space-between;">
+                <span>{{ b.dojo.name }}</span>
+                <span class="badge" style="background: rgba(6, 182, 212, 0.15); color: var(--accent-cyan); font-size: 0.75rem;">
+                    {{ b.dojo.city }}
+                </span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 0.4rem; font-size: 0.88rem;">
+                <div style="display: flex; justify-content: space-between; color: var(--text-muted);">
+                    <span>Receitas Quitadas:</span>
+                    <span style="color: #34d399; font-weight: 700;">+ R$ {{ "%.2f"|format(b.receitas) }}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; color: var(--text-muted);">
+                    <span>Despesas Operacionais:</span>
+                    <span style="color: #f43f5e; font-weight: 700;">- R$ {{ "%.2f"|format(b.despesas) }}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; border-top: 1px solid var(--border-color); padding-top: 0.5rem; margin-top: 0.2rem; font-weight: 800;">
+                    <span>Saldo do Dojo:</span>
+                    <span style="color: {% if b.saldo >= 0 %}#38bdf8{% else %}#f43f5e{% endif %}; font-family: 'Outfit', sans-serif;">
+                        R$ {{ "%.2f"|format(b.saldo) }}
+                    </span>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- BARRA DE FILTROS DO DOJO (CATEGORIA, DOJO, FORMA DE PGTO, STATUS) -->
+<div class="filter-bar" style="margin-bottom: 1.5rem; display: flex; flex-wrap: wrap; gap: 1rem;">
+    <div class="filter-group" style="flex: 1; min-width: 180px;">
+        <span class="filter-label"><i class="fa-solid fa-layer-group"></i> Categoria:</span>
+        <select class="form-select" onchange="applyUrlFilter('category', this.value)">
+            <option value="ALL" {% if category_filter == 'ALL' %}selected{% endif %}>Todas as Categorias</option>
+            <option value="Mensalidade" {% if category_filter == 'Mensalidade' %}selected{% endif %}>Mensalidade</option>
+            <option value="Exame de Faixa" {% if category_filter == 'Exame de Faixa' %}selected{% endif %}>Exame de Faixa</option>
+            <option value="Aluguel Tatame" {% if category_filter == 'Aluguel Tatame' %}selected{% endif %}>Aluguel Tatame</option>
+            <option value="Equipamentos" {% if category_filter == 'Equipamentos' %}selected{% endif %}>Equipamentos</option>
+            <option value="Eventos" {% if category_filter == 'Eventos' %}selected{% endif %}>Eventos</option>
+            <option value="Outros" {% if category_filter == 'Outros' %}selected{% endif %}>Outros</option>
+        </select>
+    </div>
+    <div class="filter-group" style="flex: 1; min-width: 180px;">
+        <span class="filter-label"><i class="fa-solid fa-torii-gate"></i> Dojo:</span>
+        <select class="form-select" onchange="applyUrlFilter('dojo', this.value)">
+            <option value="ALL" {% if dojo_filter == 'ALL' %}selected{% endif %}>Todos os Dojos</option>
+            {% for d in dojos %}
+                <option value="{{ d.id }}" {% if dojo_filter == (d.id|string) %}selected{% endif %}>{{ d.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="filter-group" style="flex: 1; min-width: 180px;">
+        <span class="filter-label"><i class="fa-solid fa-credit-card"></i> Forma Pgto:</span>
+        <select class="form-select" onchange="applyUrlFilter('payment_method', this.value)">
+            <option value="ALL" {% if payment_method_filter == 'ALL' %}selected{% endif %}>Todas as Formas</option>
+            <option value="PIX" {% if payment_method_filter == 'PIX' %}selected{% endif %}>PIX</option>
+            <option value="Cartão" {% if payment_method_filter == 'Cartão' %}selected{% endif %}>Cartão</option>
+            <option value="Boleto" {% if payment_method_filter == 'Boleto' %}selected{% endif %}>Boleto</option>
+            <option value="Dinheiro" {% if payment_method_filter == 'Dinheiro' %}selected{% endif %}>Dinheiro</option>
+            <option value="Transferência" {% if payment_method_filter == 'Transferência' %}selected{% endif %}>Transferência</option>
+        </select>
+    </div>
+    <div class="filter-group" style="flex: 1; min-width: 180px;">
+        <span class="filter-label"><i class="fa-solid fa-file-invoice-dollar"></i> Status:</span>
+        <select class="form-select" onchange="applyUrlFilter('status', this.value)">
+            <option value="ALL" {% if status_filter == 'ALL' %}selected{% endif %}>Todos os Status</option>
+            <option value="PAID" {% if status_filter == 'PAID' %}selected{% endif %}>Pago</option>
+            <option value="PENDING" {% if status_filter == 'PENDING' %}selected{% endif %}>Pendente</option>
+            <option value="OVERDUE" {% if status_filter == 'OVERDUE' %}selected{% endif %}>Atrasado</option>
+        </select>
+    </div>
+</div>
+
+<!-- LANÇAMENTOS DO DOJO -->
+<div class="card" style="padding: 0; overflow: hidden;">
+    <div style="padding: 1.2rem 1.5rem; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between;">
+        <h2 style="font-size: 1.1rem; display: flex; align-items: center; gap: 0.5rem;">
+            <i class="fa-solid fa-list-check" style="color: var(--accent-cyan);"></i> Lançamentos Operacionais & Custos do Dojo ({{ dojo_txs|length }})
+        </h2>
+    </div>
+
+    <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;" id="dojo-financial-table">
+            <thead>
+                <tr style="background: var(--bg-surface); border-bottom: 1px solid var(--border-color); color: var(--text-muted);">
+                    <th style="padding: 1rem 1.2rem;">Descrição / Custo</th>
+                    <th style="padding: 1rem 1.2rem;">Categoria</th>
+                    <th style="padding: 1rem 1.2rem;">Dojo</th>
+                    <th style="padding: 1rem 1.2rem;">Valor (R$)</th>
+                    <th style="padding: 1rem 1.2rem;">Vencimento</th>
+                    <th style="padding: 1rem 1.2rem;">Forma Pgto</th>
+                    <th style="padding: 1rem 1.2rem;">Status</th>
+                    <th style="padding: 1rem 1.2rem; text-align: right;">Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for tx in dojo_txs %}
+                <tr class="dojo-tx-row" style="border-bottom: 1px solid var(--border-color); transition: background 0.2s ease;" onmouseover="this.style.background='rgba(255,255,255,0.03)'" onmouseout="this.style.background='transparent'">
+                    <td style="padding: 1rem 1.2rem; font-weight: 600; color: var(--text-main);">
+                        <div>{{ tx.description }}</div>
+                        {% if tx.notes %}
+                            <div style="font-size: 0.75rem; color: var(--text-muted);">{{ tx.notes }}</div>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 1rem 1.2rem;">
+                        <span class="badge" style="background: rgba(139, 92, 246, 0.15); color: #c084fc; border: 1px solid rgba(139, 92, 246, 0.3);">
+                            {{ tx.category }}
+                        </span>
+                    </td>
+                    <td style="padding: 1rem 1.2rem; color: var(--text-muted);">
+                        {{ tx.dojo.name if tx.dojo else 'Geral' }}
+                    </td>
+                    <td style="padding: 1rem 1.2rem; font-weight: 800; font-family: 'Outfit', sans-serif;">
+                        {% if tx.type == 'RECEITA' %}
+                            <span style="color: #34d399;">+ R$ {{ "%.2f"|format(tx.amount) }}</span>
+                        {% else %}
+                            <span style="color: #f43f5e;">- R$ {{ "%.2f"|format(tx.amount) }}</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 1rem 1.2rem; font-size: 0.85rem;">
+                        <div>Venc: <strong>{{ tx.due_date|date_br }}</strong></div>
+                    </td>
+                    <td style="padding: 1rem 1.2rem; color: var(--text-muted);">
+                        {{ tx.payment_method or '-' }}
+                    </td>
+                    <td style="padding: 1rem 1.2rem;">
+                        {% if tx.status == 'PAID' %}
+                            <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4);">
+                                <i class="fa-solid fa-check"></i> PAGO
+                            </span>
+                        {% else %}
+                            <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.4);">
+                                <i class="fa-regular fa-clock"></i> PENDENTE
+                            </span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 1rem 1.2rem; text-align: right;">
+                        <div style="display: flex; gap: 0.4rem; justify-content: flex-end;">
+                            <form action="/api/financial/{{ tx.id }}/toggle-status" method="POST" style="display: inline;">
+                                <input type="hidden" name="redirect_view" value="dojo">
+                                {% if tx.status == 'PAID' %}
+                                    <button type="submit" class="btn btn-secondary btn-sm" style="padding: 0.3rem 0.6rem; font-size: 0.75rem;">
+                                        <i class="fa-solid fa-rotate-left"></i> Estornar
+                                    </button>
+                                {% else %}
+                                    <button type="submit" class="btn btn-primary btn-sm" style="padding: 0.3rem 0.6rem; font-size: 0.75rem; background: var(--accent-emerald); border-color: var(--accent-emerald);">
+                                        <i class="fa-solid fa-check"></i> Pagar
+                                    </button>
+                                {% endif %}
+                            </form>
+                            <form action="/api/financial/{{ tx.id }}/delete" method="POST" style="display: inline;" onsubmit="return confirm('Excluir esta despesa/receita do dojo?');">
+                                <input type="hidden" name="redirect_view" value="dojo">
+                                <button type="submit" class="btn btn-secondary btn-sm" style="padding: 0.3rem 0.6rem; font-size: 0.75rem; color: var(--accent-rose); border-color: rgba(244, 63, 94, 0.3);">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endif %}
+
+<!-- MODAL: NOVA COBRANÇA DE ALUNO -->
+<div id="modal-new-student-charge" class="modal-backdrop" style="display: none;">
+    <div class="modal-content" style="max-width: 600px;">
+        <div class="modal-header">
+            <h2><i class="fa-solid fa-user-graduate" style="color: var(--accent-cyan);"></i> Nova Cobrança de Aluno</h2>
+            <button class="modal-close">&times;</button>
+        </div>
+        <form action="/api/financial/create" method="POST">
+            <input type="hidden" name="redirect_view" value="students">
+            <input type="hidden" name="type" value="RECEITA">
+            <div class="modal-body">
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label class="form-label">Aluno *</label>
+                    <select name="user_id" class="form-select" required>
+                        <option value="">-- Selecione o Aluno --</option>
+                        {% for st in students %}
+                            <option value="{{ st.id }}">{{ st.name }} ({{ st.belt_rank }} - {{ st.dojo.name if st.dojo else 'Geral' }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label class="form-label">Descrição *</label>
+                    <input type="text" name="description" class="form-input" placeholder="Ex: Mensalidade Agost/2026 ou Taxa Exame" required>
+                </div>
+                <div class="grid-2" style="gap: 1rem; margin-bottom: 1rem;">
+                    <div class="form-group">
+                        <label class="form-label">Categoria *</label>
+                        <select name="category" class="form-select" required>
+                            <option value="Mensalidade" selected>Mensalidade</option>
+                            <option value="Exame de Faixa">Exame de Faixa</option>
+                            <option value="Equipamentos">Equipamentos</option>
+                            <option value="Outros">Outros</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Valor (R$) *</label>
+                        <input type="number" step="0.01" name="amount" class="form-input" value="250.00" required>
+                    </div>
+                </div>
+                <div class="grid-2" style="gap: 1rem; margin-bottom: 1rem;">
+                    <div class="form-group">
+                        <label class="form-label">Data de Vencimento *</label>
+                        <input type="date" name="due_date" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Status Inicial</label>
+                        <select name="status" class="form-select">
+                            <option value="PENDING" selected>Pendente</option>
+                            <option value="PAID">Pago (Dar Baixa)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary modal-close">Cancelar</button>
+                <button type="submit" class="btn btn-primary"><i class="fa-solid fa-check"></i> Registrar Cobrança</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL: REGISTRAR DESPESA / RECEITA DO DOJO -->
+<div id="modal-new-dojo-expense" class="modal-backdrop" style="display: none;">
+    <div class="modal-content" style="max-width: 600px;">
+        <div class="modal-header">
+            <h2><i class="fa-solid fa-building-columns" style="color: var(--accent-cyan);"></i> Lançamento Financeiro do Dojo</h2>
+            <button class="modal-close">&times;</button>
+        </div>
+        <form action="/api/financial/create" method="POST">
+            <input type="hidden" name="redirect_view" value="dojo">
+            <div class="modal-body">
+                <div class="grid-2" style="gap: 1rem; margin-bottom: 1rem;">
+                    <div class="form-group">
+                        <label class="form-label">Tipo *</label>
+                        <select name="type" class="form-select" required>
+                            <option value="DESPESA" selected>Despesa Operacional (Saída)</option>
+                            <option value="RECEITA">Receita Institucional (Entrada)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Categoria *</label>
+                        <select name="category" class="form-select" required>
+                            <option value="Aluguel Tatame" selected>Aluguel Tatame / Espaço</option>
+                            <option value="Equipamentos">Equipamentos & Armas</option>
+                            <option value="Eventos">Eventos & Seminários</option>
+                            <option value="Outros">Outros Custos Operacionais</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label class="form-label">Descrição *</label>
+                    <input type="text" name="description" class="form-input" placeholder="Ex: Aluguel mensal Sede Botafogo ou Higienização Tatames" required>
+                </div>
+                <div class="grid-2" style="gap: 1rem; margin-bottom: 1rem;">
+                    <div class="form-group">
+                        <label class="form-label">Dojo Pertencente</label>
+                        <select name="dojo_id" class="form-select">
+                            <option value="">Geral (Todos os Dojos)</option>
+                            {% for d in dojos %}
+                                <option value="{{ d.id }}">{{ d.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Valor (R$) *</label>
+                        <input type="number" step="0.01" name="amount" class="form-input" placeholder="1200.00" required>
+                    </div>
+                </div>
+                <div class="grid-2" style="gap: 1rem; margin-bottom: 1rem;">
+                    <div class="form-group">
+                        <label class="form-label">Data de Vencimento *</label>
+                        <input type="date" name="due_date" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Status Inicial</label>
+                        <select name="status" class="form-select">
+                            <option value="PENDING" selected>Pendente</option>
+                            <option value="PAID">Pago / Quitado</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary modal-close">Cancelar</button>
+                <button type="submit" class="btn btn-primary"><i class="fa-solid fa-check"></i> Salvar Registro</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL: GERAR MENSALIDADES EM LOTE -->
+<div id="modal-generate-monthly-fees" class="modal-backdrop" style="display: none;">
+    <div class="modal-content" style="max-width: 500px;">
+        <div class="modal-header">
+            <h2><i class="fa-solid fa-bolt" style="color: var(--accent-cyan);"></i> Gerar Mensalidades do Mês em Lote</h2>
+            <button class="modal-close">&times;</button>
+        </div>
+        <form action="/api/financial/generate-monthly-fees" method="POST">
+            <div class="modal-body">
+                <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1.2rem;">
+                    Esta operação criará automaticamente a cobrança de mensalidade pendente para todos os alunos ativos do dojo.
+                </p>
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label class="form-label">Mês / Ano de Referência *</label>
+                    <input type="text" name="month_year" class="form-input" placeholder="Ex: 08/2026" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Valor Padrão (R$) *</label>
+                    <input type="number" step="0.01" name="amount" class="form-input" value="250.00" required>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary modal-close">Cancelar</button>
+                <button type="submit" class="btn btn-primary" style="background: var(--accent-cyan); border-color: var(--accent-cyan); color: #0f172a;">
+                    <i class="fa-solid fa-bolt"></i> Gerar para Todos os Alunos
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL: EDITAR LANÇAMENTO / COBRANÇA -->
+<div id="modal-edit-transaction" class="modal-backdrop" style="display: none;">
+    <div class="modal-content" style="max-width: 600px;">
+        <div class="modal-header">
+            <h2><i class="fa-solid fa-pen-to-square" style="color: var(--accent-cyan);"></i> Editar Lançamento Financeiro</h2>
+            <button class="modal-close" onclick="closeEditModal()">&times;</button>
+        </div>
+        <form id="form-edit-transaction" action="" method="POST">
+            <input type="hidden" name="redirect_view" id="edit-redirect-view" value="{{ active_view }}">
+            <div class="modal-body">
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label class="form-label">Descrição *</label>
+                    <input type="text" id="edit-description" name="description" class="form-input" required>
+                </div>
+                <div class="grid-2" style="gap: 1rem; margin-bottom: 1rem;">
+                    <div class="form-group">
+                        <label class="form-label">Tipo de Movimentação</label>
+                        <select id="edit-type" name="type" class="form-select" required>
+                            <option value="RECEITA">Receita (Entrada)</option>
+                            <option value="DESPESA">Despesa (Saída)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Categoria *</label>
+                        <select id="edit-category" name="category" class="form-select" required>
+                            <option value="Mensalidade">Mensalidade</option>
+                            <option value="Exame de Faixa">Exame de Faixa</option>
+                            <option value="Aluguel Tatame">Aluguel Tatame</option>
+                            <option value="Equipamentos">Equipamentos & Armas</option>
+                            <option value="Eventos">Eventos & Seminários</option>
+                            <option value="Outros">Outros</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="grid-2" style="gap: 1rem; margin-bottom: 1rem;">
+                    <div class="form-group">
+                        <label class="form-label">Valor (R$) *</label>
+                        <input type="number" step="0.01" id="edit-amount" name="amount" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Data de Vencimento *</label>
+                        <input type="date" id="edit-due-date" name="due_date" class="form-input" required>
+                    </div>
+                </div>
+                <div class="grid-2" style="gap: 1rem; margin-bottom: 1rem;">
+                    <div class="form-group">
+                        <label class="form-label">Dojo Relacionado</label>
+                        <select id="edit-dojo-id" name="dojo_id" class="form-select">
+                            <option value="">Geral (Todos os Dojos)</option>
+                            {% for d in dojos %}
+                                <option value="{{ d.id }}">{{ d.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Aluno Relacionado</label>
+                        <select id="edit-user-id" name="user_id" class="form-select">
+                            <option value="">Nenhum (Lançamento Institucional)</option>
+                            {% for st in students %}
+                                <option value="{{ st.id }}">{{ st.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="grid-2" style="gap: 1rem; margin-bottom: 1rem;">
+                    <div class="form-group">
+                        <label class="form-label">Status</label>
+                        <select id="edit-status" name="status" class="form-select">
+                            <option value="PENDING">Pendente</option>
+                            <option value="PAID">Pago (Baixado)</option>
+                            <option value="OVERDUE">Atrasado</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Forma de Pagamento</label>
+                        <select id="edit-payment-method" name="payment_method" class="form-select">
+                            <option value="PIX">PIX</option>
+                            <option value="Cartão">Cartão</option>
+                            <option value="Boleto">Boleto</option>
+                            <option value="Dinheiro">Dinheiro</option>
+                            <option value="Transferência">Transferência</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Observações</label>
+                    <textarea id="edit-notes" name="notes" class="form-textarea" rows="2"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeEditModal()">Cancelar</button>
+                <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> Salvar Alterações</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL: PAGAMENTO QR CODE PIX -->
+<div id="modal-pix-payment" class="modal-backdrop" style="display: none;">
+    <div class="modal-content" style="max-width: 500px; text-align: center;">
+        <div class="modal-header">
+            <h2><i class="fa-solid fa-qrcode" style="color: var(--accent-emerald);"></i> Pagamento via PIX</h2>
+            <button class="modal-close" onclick="closePixModal()">&times;</button>
+        </div>
+        <div class="modal-body" style="padding: 1.5rem;">
+            <div style="background: rgba(16, 185, 129, 0.1); border: 1px dashed var(--accent-emerald); border-radius: var(--radius-md); padding: 1rem; margin-bottom: 1.2rem;">
+                <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.2rem;" id="pix-modal-desc">Mensalidade RioAiki</div>
+                <div style="font-size: 1.8rem; font-weight: 800; color: #34d399; font-family: 'Outfit', sans-serif;" id="pix-modal-amount">R$ 250.00</div>
+                <div style="font-size: 0.75rem; color: var(--text-dim);" id="pix-modal-due">Vencimento: 2026-08-10</div>
+            </div>
+
+            <!-- IMAGEM DO QR CODE GERADA DINAMICAMENTE -->
+            <div style="background: white; padding: 1rem; border-radius: 12px; display: inline-block; box-shadow: 0 10px 25px rgba(0,0,0,0.5); margin-bottom: 1.2rem;">
+                <img id="pix-qr-image" src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=00020126580014BR.GOV.BCB.PIX0114pix@rioaiki.com.br5204000053039865406250.005802BR5912RioAikiDojo6009RioDeJaneiro62070503***6304E2CA" alt="QR Code PIX" style="width: 200px; height: 200px; display: block;">
+            </div>
+
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
+                Abra o aplicativo do seu banco, escolha <strong>PIX -> Ler QR Code</strong> ou use a chave copia e cola abaixo:
+            </p>
+
+            <div class="form-group" style="margin-bottom: 1.2rem;">
+                <label class="form-label" style="text-align: left; display: block;"><i class="fa-solid fa-copy"></i> Chave PIX Copia e Cola:</label>
+                <div style="display: flex; gap: 0.5rem;">
+                    <input type="text" id="pix-copia-cola" class="form-input" readonly value="00020126580014BR.GOV.BCB.PIX0114pix@rioaiki.com.br5204000053039865406250.005802BR5912RioAikiDojo6009RioDeJaneiro62070503***6304E2CA" style="font-size: 0.75rem; background: rgba(15, 23, 42, 0.8); border-color: var(--border-color);">
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="copyPixKey()" style="white-space: nowrap;" id="btn-copy-pix">
+                        <i class="fa-solid fa-copy"></i> Copiar
+                    </button>
+                </div>
+            </div>
+
+            <div style="font-size: 0.75rem; color: var(--text-muted); background: rgba(255, 255, 255, 0.03); padding: 0.6rem; border-radius: 6px;">
+                <i class="fa-solid fa-building-columns"></i> Favorecido: <strong>RioAiki Associação de Aikido</strong><br>
+                Chave PIX: <strong>pix@rioaiki.com.br</strong>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closePixModal()">Fechar</button>
+            <button type="button" class="btn btn-primary" onclick="alert('Após efetuar o PIX, o comprovante pode ser enviado ao seu Sensei para baixa imediata!'); closePixModal();" style="background: var(--accent-emerald); border-color: var(--accent-emerald);">
+                <i class="fa-solid fa-check"></i> Já Efetuei o Pagamento
+            </button>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function formatBrDate(isoStr) {
+    if (!isoStr) return '';
+    const parts = isoStr.split('-');
+    if (parts.length === 3 && parts[0].length === 4) {
+        return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+    return isoStr;
+}
+
+function openPixModal(id, desc, amount, dueDate) {
+    const modal = document.getElementById('modal-pix-payment');
+    if (!modal) return;
+
+    document.getElementById('pix-modal-desc').innerText = desc || 'Mensalidade RioAiki';
+    document.getElementById('pix-modal-amount').innerText = `R$ ${parseFloat(amount).toFixed(2)}`;
+    document.getElementById('pix-modal-due').innerText = `Vencimento: ${formatBrDate(dueDate) || 'Imediato'}`;
+
+    const pixPayload = `00020126580014BR.GOV.BCB.PIX0114pix@rioaiki.com.br5204000053039865406${parseFloat(amount).toFixed(2)}5802BR5912RioAikiDojo6009RioDeJaneiro62070503***6304E2CA`;
+    document.getElementById('pix-copia-cola').value = pixPayload;
+    
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(pixPayload)}`;
+    document.getElementById('pix-qr-image').src = qrUrl;
+
+    modal.style.display = 'flex';
+    modal.classList.add('active');
+}
+
+function closePixModal() {
+    const modal = document.getElementById('modal-pix-payment');
+    if (modal) {
+        modal.style.display = 'none';
+        modal.classList.remove('active');
+    }
+}
+
+function copyPixKey() {
+    const input = document.getElementById('pix-copia-cola');
+    if (input) {
+        input.select();
+        navigator.clipboard.writeText(input.value);
+        const btn = document.getElementById('btn-copy-pix');
+        if (btn) {
+            btn.innerHTML = '<i class="fa-solid fa-check"></i> Copiado!';
+            setTimeout(() => {
+                btn.innerHTML = '<i class="fa-solid fa-copy"></i> Copiar';
+            }, 2000);
+        }
+    }
+}
+function filterStudentTable() {
+    const query = document.getElementById('search-student').value.toLowerCase();
+    const rows = document.querySelectorAll('#student-financial-table .st-row, #student-crud-table .st-crud-row');
+    rows.forEach(row => {
+        const text = row.innerText.toLowerCase();
+        row.style.display = text.includes(query) ? '' : 'none';
+    });
+}
+
+function applyUrlFilter(param, value) {
+    const url = new URL(window.location.href);
+    url.searchParams.set(param + '_filter', value);
+    window.location.href = url.toString();
+}
+
+function openStudentHistory(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.add('active');
+        modal.style.display = 'flex';
+    }
+}
+
+function closeStudentHistory(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.remove('active');
+        modal.style.display = 'none';
+    }
+}
+
+function openEditModal(id, desc, amount, type, category, dueDate, status, dojoId, userId, payMethod, notes) {
+    const modal = document.getElementById('modal-edit-transaction');
+    const form = document.getElementById('form-edit-transaction');
+    if (!modal || !form) return;
+
+    form.action = `/api/financial/${id}/update`;
+    document.getElementById('edit-description').value = desc;
+    document.getElementById('edit-amount').value = amount;
+    document.getElementById('edit-type').value = type || 'RECEITA';
+    document.getElementById('edit-category').value = category || 'Mensalidade';
+    document.getElementById('edit-due-date').value = dueDate;
+    document.getElementById('edit-status').value = status;
+    document.getElementById('edit-dojo-id').value = dojoId || '';
+    document.getElementById('edit-user-id').value = userId || '';
+    document.getElementById('edit-payment-method').value = payMethod || 'PIX';
+    document.getElementById('edit-notes').value = notes || '';
+
+    modal.style.display = 'flex';
+    modal.classList.add('active');
+}
+
+function closeEditModal() {
+    const modal = document.getElementById('modal-edit-transaction');
+    if (modal) {
+        modal.style.display = 'none';
+        modal.classList.remove('active');
+    }
+}
+
+function updateBatchPreview() {
+    const amountInput = document.getElementById('batch-amount');
+    const dojoSelect = document.getElementById('batch-dojo-id');
+    const previewCountEl = document.getElementById('preview-student-count');
+    const previewTotalEl = document.getElementById('preview-total-amount');
+
+    if (!amountInput || !dojoSelect || !previewCountEl || !previewTotalEl) return;
+
+    const amount = parseFloat(amountInput.value) || 0;
+    const selectedDojo = dojoSelect.value;
+    
+    const rows = document.querySelectorAll('#student-financial-table .st-row');
+    let count = 0;
+    rows.forEach(r => {
+        if (selectedDojo === 'ALL') {
+            count++;
+        } else {
+            const optText = dojoSelect.options[dojoSelect.selectedIndex].text;
+            const rowDojo = r.children[2] ? r.children[2].innerText.trim() : '';
+            if (optText.includes(rowDojo) || rowDojo.includes(optText)) {
+                count++;
+            }
+        }
+    });
+
+    if (count === 0 && selectedDojo === 'ALL') {
+        count = {{ total_alunos_count }};
+    }
+
+    const total = count * amount;
+    previewCountEl.innerText = `${count} alunos`;
+    previewTotalEl.innerText = `R$ ${total.toFixed(2)}`;
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Preenche o campo de mês/ano do lote com o próximo mês no formato MM/YYYY
+    const batchMonthInput = document.getElementById('batch-month-year');
+    if (batchMonthInput && !batchMonthInput.value) {
+        const nextMonthDate = new Date();
+        nextMonthDate.setMonth(nextMonthDate.getMonth() + 1);
+        const mm = String(nextMonthDate.getMonth() + 1).padStart(2, '0');
+        const yyyy = nextMonthDate.getFullYear();
+        batchMonthInput.value = `${mm}/${yyyy}`;
+    }
+
+    // Garante que todos os modais iniciem estritamente fechados
+    document.querySelectorAll('.modal-backdrop').forEach(modal => {
+        modal.style.display = 'none';
+        modal.classList.remove('active');
+
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.style.display = 'none';
+                modal.classList.remove('active');
+            }
+        });
+    });
+
+    document.querySelectorAll('input[type="date"]').forEach(inp => {
+        if (!inp.value) inp.value = new Date().toISOString().split('T')[0];
+    });
+});
+</script>
+{% endblock %}

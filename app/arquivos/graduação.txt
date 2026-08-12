@@ -1,0 +1,11 @@
+5º Kyu - Amarela - 40 aulas
+4º Kyu - Roxa - 60 aulas
+3º Kyu - Verde - 60 aulas
+2º Kyu - Azul - 90 aulas
+1º Kyu - Marrom - 100 aulas
+Shodan - Faixa Preta 1º dan - 400 aulas
+Nidan - Faixa Preta 2º dan - 600 aulas
+Sandan - Faixa Preta 3º dan - 600 aulas
+Yondan - Faixa Preta 4º dan - 800 aulas
+Godan - Faixa Preta 5º dan - 800 aulas
+Rokudan - Faixa Preta 6º dan - 800 aulas

@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+
+# Database (NUNCA versionar o banco SQLite - contem dados pessoais/LGPD)
+*.db
+
+# Segredos (JWT key etc.) - NUNCA versionar
+.env
+
+# Backups locais do banco (rotina scripts/backup_db.py)
+backups/
+
+# Antigravity / Agent Scratch
+scratch/
+.system_generated/
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

@@ -1,0 +1,1784 @@
+{% extends "base.html" %}
+
+{% block title %}🥋 DOJOCHO - Gestão de Dojos, Senseis e Alunos{% endblock %}
+
+{% block content %}
+<div class="page-header" style="margin-bottom: 1rem;">
+    <div>
+        <h1 class="page-title"><i class="fa-solid fa-users-gear" style="color: var(--primary);"></i> Gestão do Grupo RioAiki</h1>
+        <p class="page-subtitle">Gestão de dojos, senseis responsáveis e alunos</p>
+    </div>
+</div>
+
+<!-- BARRA UNIFICADA EM UMA ÚNICA LINHA: ABAS À ESQUERDA E BOTÕES À DIREITA -->
+<div class="subnav-tabs-container" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.8rem; margin-bottom: 1.5rem;">
+    <!-- NAVEGAÇÃO POR ABAS -->
+    <div style="display: flex; gap: 0.6rem; flex-wrap: wrap;">
+        <button class="subnav-tab active" id="tab-btn-dojos" onclick="switchManagementTab('dojos')">
+            <i class="fa-solid fa-torii-gate"></i> Dojos Cadastrados ({{ dojos|length }})
+        </button>
+        <button class="subnav-tab" id="tab-btn-senseis" onclick="switchManagementTab('senseis')">
+            <i class="fa-solid fa-graduation-cap"></i> Senseis & Instrutores ({{ senseis|length }})
+        </button>
+        <button class="subnav-tab" id="tab-btn-alunos" onclick="switchManagementTab('alunos')">
+            <i class="fa-solid fa-user-ninja"></i> Alunos & Practicantes ({{ students|length }})
+        </button>
+    </div>
+
+    <!-- BOTÕES DE AÇÃO NA MESMA LINHA -->
+    <div style="display: flex; gap: 0.5rem;">
+        <button class="btn btn-primary" data-modal="modal-new-user">
+            <i class="fa-solid fa-user-plus"></i> Cadastrar Aluno/Sensei
+        </button>
+        <button class="btn btn-secondary" data-modal="modal-new-dojo">
+            <i class="fa-solid fa-torii-gate"></i> Criar Dojo
+        </button>
+    </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- TELA 1: DOJOS -->
+<!-- ========================================================================= -->
+<div class="tab-pane" id="tab-pane-dojos" style="display: block;">
+    
+    <!-- FILTROS ESPECÍFICOS PARA DOJOS -->
+    <div class="filter-bar">
+        <div class="filter-group">
+            <span class="filter-label"><i class="fa-solid fa-magnifying-glass"></i> Buscar Dojo:</span>
+            <input type="text" id="search-dojo" class="form-input" placeholder="Nome do dojo ou endereço..." onkeyup="filterDojos()">
+        </div>
+
+        <div class="filter-group">
+            <span class="filter-label">Cidade:</span>
+            <select id="city-filter" class="form-select" onchange="filterDojos()">
+                <option value="all">Todas as Cidades</option>
+                <option value="Rio de Janeiro">Rio de Janeiro</option>
+            </select>
+        </div>
+
+        <!-- DROPDOWN QUANTIDADE DE COLUNAS (1, 2, 3, 4, 5) -->
+        <div class="filter-group" style="max-width: 200px;">
+            <span class="filter-label"><i class="fa-solid fa-table-columns"></i> Colunas:</span>
+            <select class="form-select" onchange="changeGridColumns('grid-dojos', this)">
+                <option value="1">1 Coluna</option>
+                <option value="2">2 Colunas</option>
+                <option value="3" selected>3 Colunas</option>
+                <option value="4">4 Colunas</option>
+                <option value="5">5 Colunas</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- GRID DE DOJOS -->
+    <div class="grid-3 grid-dynamic" id="grid-dojos">
+        {% for dojo in dojos %}
+        {% set instructors = dojo.schedules|map(attribute='instructor')|reject('none')|unique|list %}
+        {% set students_list = dojo.members|selectattr('role', 'equalto', 'STUDENT')|list %}
+        <div class="card dojo-card-item" 
+             style="cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;" 
+             data-name="{{ dojo.name.lower() }}" 
+             data-address="{{ dojo.address.lower() }}" 
+             data-city="{{ dojo.city }}"
+             onclick="openDojoDetailsModal({
+                id: {{ dojo.id }},
+                name: '{{ dojo.name|replace('\'', '\\\'') }}',
+                academy: '{{ (dojo.academy or '')|replace('\'', '\\\'') }}',
+                address: '{{ (dojo.address or '')|replace('\'', '\\\'') }}',
+                city: '{{ (dojo.city or '')|replace('\'', '\\\'') }}',
+                description: '{{ (dojo.description or '')|replace('\'', '\\\'') }}',
+                photo_url: '{{ (dojo.photo_url or '')|replace('\'', '\\\'') }}',
+                responsible_sensei: {
+                    name: '{{ (dojo.responsible_sensei.name if dojo.responsible_sensei else '')|replace('\'', '\\\'') }}',
+                    belt_rank: '{{ (dojo.responsible_sensei.belt_rank if dojo.responsible_sensei else '')|replace('\'', '\\\'') }}',
+                    email: '{{ (dojo.responsible_sensei.email if dojo.responsible_sensei else '')|replace('\'', '\\\'') }}',
+                    phone: '{{ (dojo.responsible_sensei.phone if dojo.responsible_sensei else '')|replace('\'', '\\\'') }}',
+                    photo_url: '{{ (dojo.responsible_sensei.photo_url if dojo.responsible_sensei else '')|replace('\'', '\\\'') }}'
+                },
+                instructors: [
+                    {% for inst in instructors %}
+                    {
+                        name: '{{ inst.name|replace('\'', '\\\'') }}',
+                        belt_rank: '{{ inst.belt_rank|replace('\'', '\\\'') }}',
+                        photo_url: '{{ inst.photo_url or '' }}'
+                    }{% if not loop.last %},{% endif %}
+                    {% endfor %}
+                ],
+                students: [
+                    {% for st in students_list %}
+                    {
+                        id: {{ st.id }},
+                        name: '{{ st.name|replace('\'', '\\\'') }}',
+                        email: '{{ st.email|replace('\'', '\\\'') }}',
+                        role: '{{ st.role|replace('\'', '\\\'') }}',
+                        belt_rank: '{{ st.belt_rank|replace('\'', '\\\'') }}',
+                        dojo_id: {{ st.dojo_id or 'null' }},
+                        supervisor_sensei_id: {{ st.supervisor_sensei_id or 'null' }},
+                        cpf_masked: '{{ st.cpf_masked or '' }}',
+                        birth_date: '{{ (st.birth_date or '')|replace('\'', '\\\'') }}',
+                        start_date: '{{ st.start_date or '' }}',
+                        last_exam_date: '{{ st.last_exam_date or '' }}',
+                        total_attendances: {{ st.total_attendances or 0 }},
+                        req_attendances: {{ st.belt_rank|req_attendances }},
+                        ready_for_exam: {{ 'true' if st.ready_for_exam else 'false' }},
+                        is_active: {{ 'true' if st.is_active else 'false' }},
+                        blood_type: '{{ st.blood_type or "Não Informado" }}',
+                        health_insurance: '{{ (st.health_insurance or "")|replace('\'', '\\\'') }}',
+                        medical_notes: '{{ (st.medical_notes or "")|replace('\'', '\\\'') }}',
+                        emergency_contact_name: '{{ (st.emergency_contact_name or "")|replace('\'', '\\\'') }}',
+                        emergency_contact_phone: '{{ (st.emergency_contact_phone or "")|replace('\'', '\\\'') }}',
+                        blood_transfusion_approved: {{ 'true' if st.blood_transfusion_approved else 'false' }},
+                        lgpd_consent: {{ 'true' if st.lgpd_consent else 'false' }},
+                        photo_url: '{{ st.photo_url or '' }}'
+                    }{% if not loop.last %},{% endif %}
+                    {% endfor %}
+                ]
+             })">
+            <img src="{{ dojo.photo_url or 'https://images.unsplash.com/photo-1518611012118-696072aa579a?w=600' }}" style="width: 100%; height: 160px; object-fit: cover; border-radius: var(--radius-sm); margin-bottom: 1rem;">
+            <h3 style="font-size: 1.2rem; color: white;">{{ dojo.name }}</h3>
+            {% if dojo.academy %}
+            <p style="font-size: 0.85rem; color: var(--accent-cyan); margin: 0.1rem 0 0.3rem 0; font-weight: 600;"><i class="fa-solid fa-building"></i> {{ dojo.academy }}</p>
+            {% endif %}
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0.3rem 0;"><i class="fa-solid fa-location-dot"></i> {{ dojo.address }}</p>
+            <div style="background: var(--bg-surface); padding: 0.65rem 0.9rem; border-radius: var(--radius-sm); margin-bottom: 0.5rem; display: flex; flex-direction: column; gap: 0.35rem;">
+                <div style="font-size: 0.85rem; color: var(--accent-amber); font-weight: 700;">
+                    <i class="fa-solid fa-user-tie"></i> Sensei Responsável:
+                    <span style="color: white; font-weight: 600;">{{ dojo.responsible_sensei.name.split()[0] if dojo.responsible_sensei else 'Não atribuído' }}</span>
+                </div>
+                <div style="font-size: 0.8rem; color: var(--accent-cyan); font-weight: 600;">
+                    <i class="fa-solid fa-chalkboard-user"></i> Instrutores:
+                    <span style="color: var(--text-muted); font-weight: 400;">
+                        {% if instructors %}
+                            {% for inst in instructors %}{{ inst.name.split()[0] }}{% if not loop.last %}, {% endif %}{% endfor %}
+                        {% else %}
+                            Senseis cadastrados nas turmas
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-surface); padding: 0.65rem 0.9rem; border-radius: var(--radius-sm); margin-bottom: 0.5rem;">
+                <span class="badge badge-cyan">{{ students_list|length }} Alunos</span>
+                <small style="color: var(--text-muted); font-weight: 600;">{{ dojo.city }}</small>
+            </div>
+            {% if current_user and current_user.role in ['ADMIN', 'SENSEI'] %}
+            <div style="display: flex; gap: 0.4rem; margin-top: 0.4rem;" onclick="event.stopPropagation();">
+                <button type="button" class="btn btn-secondary btn-sm" style="flex: 1;"
+                        data-id="{{ dojo.id }}"
+                        data-name="{{ dojo.name }}"
+                        data-academy="{{ dojo.academy or '' }}"
+                        data-address="{{ dojo.address }}"
+                        data-city="{{ dojo.city }}"
+                        data-description="{{ dojo.description or '' }}"
+                        data-photo="{{ dojo.photo_url or '' }}"
+                        data-responsible-sensei-id="{{ dojo.responsible_sensei_id or '' }}"
+                        onclick="event.stopPropagation(); openEditDojoModal(this)">
+                    <i class="fa-solid fa-pen-to-square"></i> Editar
+                </button>
+                <button type="button" class="btn btn-rose btn-sm" style="flex: 1;"
+                        onclick="event.stopPropagation(); confirmDeleteDojo('{{ dojo.id }}', '{{ dojo.name }}')">
+                    <i class="fa-solid fa-trash-can"></i> Excluir
+                </button>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+
+</div>
+
+<!-- ========================================================================= -->
+<!-- TELA 2: SENSEIS & INSTRUTORES -->
+<!-- ========================================================================= -->
+<div class="tab-pane" id="tab-pane-senseis" style="display: none;">
+    
+    <!-- FILTROS ESPECÍFICOS PARA SENSEIS -->
+    <div class="filter-bar">
+        <div class="filter-group">
+            <span class="filter-label"><i class="fa-solid fa-magnifying-glass"></i> Buscar Sensei:</span>
+            <input type="text" id="search-sensei" class="form-input" placeholder="Nome ou e-mail do Sensei..." onkeyup="filterSenseis()">
+        </div>
+
+        <div class="filter-group">
+            <span class="filter-label">Dojo Principal:</span>
+            <select id="sensei-dojo-filter" class="form-select" onchange="filterSenseis()">
+                <option value="all">Todos os Dojos</option>
+                {% for dojo in dojos %}
+                    <option value="{{ dojo.id }}">{{ dojo.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <span class="filter-label">Graduação (Dan):</span>
+            <select id="sensei-belt-filter" class="form-select" onchange="filterSenseis()">
+                <option value="all">Todas as Graduações</option>
+                <option value="6º Dan">6º Dan (Shihan)</option>
+                <option value="4º Dan">4º Dan</option>
+                <option value="3º Dan">3º Dan</option>
+                <option value="2º Dan">2º Dan</option>
+            </select>
+        </div>
+
+        <!-- DROPDOWN QUANTIDADE DE COLUNAS (1, 2, 3, 4, 5) -->
+        <div class="filter-group" style="max-width: 200px;">
+            <span class="filter-label"><i class="fa-solid fa-table-columns"></i> Colunas:</span>
+            <select class="form-select" onchange="changeGridColumns('grid-senseis', this)">
+                <option value="1">1 Coluna</option>
+                <option value="2">2 Colunas</option>
+                <option value="3" selected>3 Colunas</option>
+                <option value="4">4 Colunas</option>
+                <option value="5">5 Colunas</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- GRID DE SENSEIS -->
+    <div class="grid-3 grid-dynamic" id="grid-senseis">
+        {% for sensei in senseis %}
+        <div class="member-card sensei-card-item" 
+             data-name="{{ sensei.name.lower() }}" 
+             data-email="{{ sensei.email.lower() }}" 
+             data-dojo="{{ sensei.dojo_id }}" 
+             data-belt="{{ sensei.belt_rank }}">
+            
+            <div class="member-header">
+                <img src="{{ sensei.photo_url or 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200' }}" class="member-avatar" style="border-color: var(--accent-amber);">
+                <div class="member-info" style="flex: 1;">
+                    <h4>{{ sensei.name }}</h4>
+                    <p>{{ sensei.email }}</p>
+                    <div style="display: flex; gap: 0.3rem; margin-top: 0.4rem; flex-wrap: wrap;">
+                        <span class="badge badge-amber"><i class="fa-solid fa-graduation-cap"></i> {{ sensei.role }}</span>
+                        <span class="badge badge-primary">{{ sensei.belt_rank }}</span>
+                        <span class="badge badge-emerald">Ativo</span>
+                    </div>
+                </div>
+            </div>
+
+            <div onclick="openStudentAttendancesModal({{ sensei.id }}, '{{ sensei.name|replace("'", "\\'") }}')"
+                 title="Clique para visualizar o histórico de presenças em aulas"
+                 style="font-size: 0.825rem; color: var(--text-muted); display: flex; flex-direction: column; gap: 0.35rem; background: var(--bg-surface); padding: 0.75rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); cursor: pointer; transition: var(--transition);"
+                 onmouseover="this.style.borderColor='var(--accent-cyan)'; this.style.background='rgba(56, 189, 248, 0.08)';"
+                 onmouseout="this.style.borderColor='var(--border-color)'; this.style.background='var(--bg-surface)';">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div><i class="fa-solid fa-torii-gate" style="color: var(--accent-cyan);"></i> Dojo Principal: <strong>{{ sensei.dojo.name if sensei.dojo else 'RioAiki Geral' }}</strong></div>
+                    <span style="font-size: 0.7rem; color: var(--accent-cyan); font-weight: 700; background: rgba(56, 189, 248, 0.12); padding: 1px 6px; border-radius: 8px; border: 1px solid rgba(56, 189, 248, 0.3);"><i class="fa-solid fa-list-check"></i> Histórico</span>
+                </div>
+                <div><i class="fa-solid fa-clock-rotate-left" style="color: var(--accent-cyan);"></i> Total de Treinos: <strong style="color: var(--accent-cyan); font-size: 0.95rem;">{{ sensei.total_attendances }}</strong> <small style="color: var(--text-dim);">(Ver aulas)</small></div>
+            </div>
+
+            {% if current_user and (current_user.role == 'ADMIN' or current_user.sub|int == sensei.id) %}
+            <div style="margin-top: 0.5rem; display: flex; gap: 0.4rem;">
+                <button type="button" class="btn btn-secondary btn-sm" style="flex: 1;" onclick="openEditStudentModal({
+                    id: {{ sensei.id }},
+                    name: '{{ sensei.name|replace("'", "\\'") }}',
+                    email: '{{ sensei.email|replace("'", "\\'") }}',
+                    role: '{{ sensei.role|replace("'", "\\'") }}',
+                    belt_rank: '{{ sensei.belt_rank|replace("'", "\\'") }}',
+                    dojo_id: {{ sensei.dojo_id or 'null' }},
+                    supervisor_sensei_id: {{ sensei.supervisor_sensei_id or 'null' }},
+                    cpf_masked: '{{ sensei.cpf_masked or '' }}',
+                    birth_date: '{{ (sensei.birth_date or "")|replace("'", "\\'") }}',
+                    start_date: '{{ sensei.start_date or '' }}',
+                    last_exam_date: '{{ sensei.last_exam_date or '' }}',
+                    total_attendances: {{ sensei.total_attendances or 0 }},
+                    ready_for_exam: {{ 'true' if sensei.ready_for_exam else 'false' }},
+                    is_active: {{ 'true' if sensei.is_active else 'false' }},
+                    blood_type: '{{ sensei.blood_type or "Não Informado" }}',
+                    health_insurance: '{{ (sensei.health_insurance or "")|replace("\'", "\\\'") }}',
+                    medical_notes: '{{ (sensei.medical_notes or "")|replace("\'", "\\\'") }}',
+                    emergency_contact_name: '{{ (sensei.emergency_contact_name or "")|replace("'", "\\'") }}',
+                    emergency_contact_phone: '{{ (sensei.emergency_contact_phone or "")|replace("'", "\\'") }}',
+                    blood_transfusion_approved: {{ 'true' if sensei.blood_transfusion_approved else 'false' }},
+                    lgpd_consent: {{ 'true' if sensei.lgpd_consent else 'false' }},
+                    photo_url: '{{ sensei.photo_url or '' }}'
+                })">
+                    <i class="fa-solid fa-pen-to-square"></i> Editar
+                </button>
+                <button type="button" class="btn btn-rose btn-sm" style="flex: 1;" onclick="confirmDeleteUser({{ sensei.id }}, '{{ sensei.name|replace("'", "\\'") }}')">
+                    <i class="fa-solid fa-trash-can"></i> Excluir
+                </button>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+
+</div>
+
+<!-- ========================================================================= -->
+<!-- TELA 3: ALUNOS & PRATICANTES -->
+<!-- ========================================================================= -->
+<div class="tab-pane" id="tab-pane-alunos" style="display: none;">
+    
+    <!-- FILTROS ESPECÍFICOS PARA ALUNOS -->
+    <div class="filter-bar">
+        <div class="filter-group">
+            <span class="filter-label"><i class="fa-solid fa-magnifying-glass"></i> Buscar Aluno:</span>
+            <input type="text" id="search-student" class="form-input" placeholder="Nome, e-mail ou CPF..." onkeyup="filterStudents()">
+        </div>
+
+        <div class="filter-group">
+            <span class="filter-label">Dojo de Origem:</span>
+            <select id="student-dojo-filter" class="form-select" onchange="filterStudents()">
+                <option value="all">Todos os Dojos</option>
+                {% for dojo in dojos %}
+                    <option value="{{ dojo.id }}">{{ dojo.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <span class="filter-label">Sensei Responsável:</span>
+            <select id="student-sensei-filter" class="form-select" onchange="filterStudents()">
+                <option value="all">Todos os Senseis</option>
+                {% for s in senseis %}
+                    <option value="{{ s.id }}">{{ s.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <span class="filter-label">Status:</span>
+            <select id="student-status-filter" class="form-select" onchange="filterStudents()">
+                <option value="all">Todos os Status</option>
+                <option value="active">Alunos Ativos</option>
+                <option value="inactive">Alunos Inativos</option>
+            </select>
+        </div>
+
+        <!-- DROPDOWN QUANTIDADE DE COLUNAS (1, 2, 3, 4, 5) -->
+        <div class="filter-group" style="max-width: 200px;">
+            <span class="filter-label"><i class="fa-solid fa-table-columns"></i> Colunas:</span>
+            <select class="form-select" onchange="changeGridColumns('grid-students', this)">
+                <option value="1">1 Coluna</option>
+                <option value="2">2 Colunas</option>
+                <option value="3" selected>3 Colunas</option>
+                <option value="4">4 Colunas</option>
+                <option value="5">5 Colunas</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- GRID DE ALUNOS -->
+    <div class="grid-3 grid-dynamic" id="grid-students">
+        {% for student in students %}
+        <div class="member-card student-card-item" 
+             data-name="{{ student.name.lower() }}" 
+             data-email="{{ student.email.lower() }}"
+             data-cpf="{{ student.cpf_masked or '' }}"
+             data-dojo="{{ student.dojo_id }}" 
+             data-sensei="{{ student.supervisor_sensei_id }}"
+             data-status="{% if student.is_active %}active{% else %}inactive{% endif %}">
+            
+            <div class="member-header">
+                <img src="{{ student.photo_url or 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200' }}" class="member-avatar">
+                <div class="member-info" style="flex: 1;">
+                    <h4>{{ student.name }}</h4>
+                    <p>{{ student.email }}</p>
+                    <div style="display: flex; gap: 0.3rem; margin-top: 0.4rem; flex-wrap: wrap;">
+                        <span class="badge badge-cyan">{{ student.belt_rank }}</span>
+                        {% if student.is_active %}
+                            <span class="badge badge-emerald">Ativo</span>
+                        {% else %}
+                            <span class="badge badge-rose">Inativo</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div onclick="openStudentAttendancesModal({{ student.id }}, '{{ student.name|replace("'", "\\'") }}')"
+                 title="Clique para visualizar o histórico de presenças em aulas"
+                 style="font-size: 0.825rem; color: var(--text-muted); display: flex; flex-direction: column; gap: 0.35rem; background: var(--bg-surface); padding: 0.75rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); cursor: pointer; transition: var(--transition);"
+                 onmouseover="this.style.borderColor='var(--accent-cyan)'; this.style.background='rgba(56, 189, 248, 0.08)';"
+                 onmouseout="this.style.borderColor='var(--border-color)'; this.style.background='var(--bg-surface)';">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div><i class="fa-solid fa-torii-gate" style="color: var(--accent-cyan);"></i> Dojo: <strong>{{ student.dojo.name if student.dojo else 'Não Atribuído' }}</strong></div>
+                    <span style="font-size: 0.7rem; color: var(--accent-cyan); font-weight: 700; background: rgba(56, 189, 248, 0.12); padding: 1px 6px; border-radius: 8px; border: 1px solid rgba(56, 189, 248, 0.3);"><i class="fa-solid fa-list-check"></i> Histórico</span>
+                </div>
+                <div><i class="fa-solid fa-dumbbell" style="color: var(--accent-emerald);"></i> Total de Treinos: <strong style="color: var(--accent-emerald); font-size: 0.95rem;">{{ student.total_attendances }}</strong> <small style="color: var(--text-dim);">(Ver aulas)</small></div>
+            </div>
+
+            <div class="member-meta">
+                <div>
+                    {% if student.ready_for_exam %}
+                        <span style="color: var(--accent-emerald); font-weight: 700; font-size: 0.75rem;"><i class="fa-solid fa-circle-check"></i> Apto a Exame</span>
+                    {% else %}
+                        <span style="color: var(--text-dim); font-size: 0.75rem;">Em evolução</span>
+                    {% endif %}
+                </div>
+                <div style="display: flex; gap: 0.4rem; align-items: center;">
+                    {% if current_user and (current_user.role == 'ADMIN' or (current_user.role == 'SENSEI' and (student.supervisor_sensei_id == current_user.sub|int or student.dojo_id == current_user.dojo_id))) %}
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="openEditStudentModal({
+                        id: {{ student.id }},
+                        name: '{{ student.name|replace("'", "\\'") }}',
+                        email: '{{ student.email|replace("'", "\\'") }}',
+                        role: '{{ student.role|replace("'", "\\'") }}',
+                        belt_rank: '{{ student.belt_rank|replace("'", "\\'") }}',
+                        dojo_id: {{ student.dojo_id or 'null' }},
+                        supervisor_sensei_id: {{ student.supervisor_sensei_id or 'null' }},
+                        cpf_masked: '{{ student.cpf_masked or '' }}',
+                        birth_date: '{{ (student.birth_date or "")|replace("'", "\\'") }}',
+                        start_date: '{{ student.start_date or '' }}',
+                        last_exam_date: '{{ student.last_exam_date or '' }}',
+                        total_attendances: {{ student.total_attendances or 0 }},
+                        ready_for_exam: {{ 'true' if student.ready_for_exam else 'false' }},
+                        is_active: {{ 'true' if student.is_active else 'false' }},
+                        blood_type: '{{ student.blood_type or "Não Informado" }}',
+                        health_insurance: '{{ (student.health_insurance or "")|replace("\'", "\\\'") }}',
+                        medical_notes: '{{ (student.medical_notes or "")|replace("\'", "\\\'") }}',
+                        emergency_contact_name: '{{ (student.emergency_contact_name or "")|replace("'", "\\'") }}',
+                        emergency_contact_phone: '{{ (student.emergency_contact_phone or "")|replace("'", "\\'") }}',
+                        blood_transfusion_approved: {{ 'true' if student.blood_transfusion_approved else 'false' }},
+                        lgpd_consent: {{ 'true' if student.lgpd_consent else 'false' }},
+                        photo_url: '{{ student.photo_url or '' }}'
+                    })">
+                        <i class="fa-solid fa-pen-to-square"></i> Editar
+                    </button>
+                    <button class="btn {% if student.is_active %}btn-rose{% else %}btn-emerald{% endif %} btn-sm" onclick="toggleUserStatus({{ student.id }}, {{ 'true' if student.is_active else 'false' }})">
+                        {% if student.is_active %}Inativar{% else %}Ativar{% endif %}
+                    </button>
+                    {% else %}
+                    <span style="font-size: 0.75rem; color: var(--text-dim);"><i class="fa-solid fa-lock"></i> Somente Leitura</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+</div>
+
+<!-- MODAL CADASTRAR USUÁRIO -->
+<div class="modal-backdrop" id="modal-new-user">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 style="color: white;"><i class="fa-solid fa-user-plus"></i> Novo Aluno / Sensei</h3>
+            <button class="modal-close">&times;</button>
+        </div>
+        <form action="/api/users/create" method="POST" enctype="multipart/form-data">
+            <div class="form-group">
+                <label class="form-label">Nome Completo</label>
+                <input type="text" name="name" class="form-input" required placeholder="Ex: Roberto Silva">
+            </div>
+            <div class="form-group">
+                <label class="form-label">E-mail</label>
+                <input type="email" name="email" class="form-input" required placeholder="roberto@email.com">
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                    <label class="form-label">Função</label>
+                    <select name="role" class="form-select">
+                        <option value="STUDENT">Aluno</option>
+                        <option value="SENSEI">Sensei</option>
+                        <option value="ADMIN">Administrador</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Graduação Atual</label>
+                    <select name="belt_rank" class="form-select">
+                        <option value="Mukyu (Iniciante)">Mukyu (Iniciante / Sem Faixa)</option>
+                        <option value="5º Kyu - Amarela">5º Kyu - Amarela</option>
+                        <option value="4º Kyu - Roxa">4º Kyu - Roxa</option>
+                        <option value="3º Kyu - Verde">3º Kyu - Verde</option>
+                        <option value="2º Kyu - Azul">2º Kyu - Azul</option>
+                        <option value="1º Kyu - Marrom">1º Kyu - Marrom</option>
+                        <option value="1º Dan - Preta">1º Dan - Preta (Shodan)</option>
+                        <option value="2º Dan - Preta">2º Dan - Preta (Nidan)</option>
+                        <option value="3º Dan - Preta">3º Dan - Preta (Sandan)</option>
+                        <option value="4º Dan - Preta">4º Dan - Preta (Yondan)</option>
+                        <option value="5º Dan - Preta">5º Dan - Preta (Godan)</option>
+                        <option value="6º Dan - Preta (Shihan)">6º Dan - Preta (Shihan / Rokudan)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- NOVOS CAMPOS DE DATAS: NASCIMENTO, INÍCIO NO DOJO E ÚLTIMO EXAME DE GRADUAÇÃO -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                    <label class="form-label"><i class="fa-solid fa-cake-candles" style="color: #38BDF8;"></i> Data de Nascimento</label>
+                    <input type="date" name="birth_date" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label class="form-label"><i class="fa-solid fa-calendar-check" style="color: var(--accent-cyan);"></i> Data de Início no Dojo</label>
+                    <input type="date" name="start_date" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label class="form-label"><i class="fa-solid fa-award" style="color: var(--accent-amber);"></i> Data do Último Exame</label>
+                    <input type="date" name="last_exam_date" class="form-input">
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                    <label class="form-label">Dojo de Origem</label>
+                    <select id="new-dojo-id" name="dojo_id" class="form-select" onchange="updateDojoSensei(this, 'new-supervisor-sensei-display', 'new-supervisor-sensei-hidden')">
+                        {% for dojo in dojos %}
+                            <option value="{{ dojo.id }}" data-responsible-sensei-id="{{ dojo.responsible_sensei_id or '' }}" data-responsible-sensei-name="{% if dojo.responsible_sensei %}{{ dojo.responsible_sensei.name }} ({{ dojo.responsible_sensei.belt_rank }}){% else %}Sem Sensei Responsável{% endif %}">{{ dojo.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" style="display: flex; align-items: center; gap: 0.4rem;">
+                        <i class="fa-solid fa-lock" style="color: var(--accent-amber); font-size: 0.8rem;"></i> Sensei Responsável
+                    </label>
+                    <input type="text" id="new-supervisor-sensei-display" class="form-input" readonly style="opacity: 0.85; cursor: not-allowed; background: rgba(255, 255, 255, 0.05); font-weight: 500;" placeholder="Sem Sensei Responsável">
+                    <input type="hidden" id="new-supervisor-sensei-hidden" name="supervisor_sensei_id">
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">CPF (Para Proteção LGPD)</label>
+                <input type="text" name="cpf" class="form-input" placeholder="123.456.789-00">
+            </div>
+
+            <!-- INFORMAÇÕES MÉDICAS E CONTATOS DE EMERGÊNCIA -->
+            <div style="background: rgba(225, 29, 72, 0.08); border: 1px solid rgba(225, 29, 72, 0.3); padding: 1.1rem; border-radius: var(--radius-md); margin-bottom: 1.2rem;">
+                <h4 style="color: var(--accent-rose); font-size: 0.95rem; margin-bottom: 0.8rem; display: flex; align-items: center; gap: 0.5rem;">
+                    <i class="fa-solid fa-notes-medical"></i> Informações Médicas Básicas & Emergência
+                </h4>
+                
+                <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 1rem; margin-bottom: 0.8rem;">
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label"><i class="fa-solid fa-droplet" style="color: var(--accent-rose);"></i> Tipo Sangüíneo</label>
+                        <select name="blood_type" class="form-select">
+                            <option value="Não Informado">Não Informado</option>
+                            <option value="A+">A+</option>
+                            <option value="A-">A-</option>
+                            <option value="B+">B+</option>
+                            <option value="B-">B-</option>
+                            <option value="AB+">AB+</option>
+                            <option value="AB-">AB-</option>
+                            <option value="O+">O+</option>
+                            <option value="O-">O-</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label"><i class="fa-solid fa-user-ninja"></i> Contato de Emergência</label>
+                        <input type="text" name="emergency_contact_name" class="form-input" placeholder="Ex: Maria Silva (Mãe)">
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 0.8rem;">
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label"><i class="fa-solid fa-phone"></i> Tel. de Emergência</label>
+                        <input type="text" name="emergency_contact_phone" class="form-input" placeholder="(21) 99999-8888">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label"><i class="fa-solid fa-suitcase-medical"></i> Alergias / Condições</label>
+                        <input type="text" name="medical_notes" class="form-input" placeholder="Ex: Alérgico a Penicilina">
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label"><i class="fa-solid fa-notes-medical" style="color: var(--accent-rose);"></i> Plano de Saúde</label>
+                    <input type="text" name="health_insurance" class="form-input" placeholder="Ex: Bradesco Saúde / Unimed / SulAmérica / Nenhum">
+                </div>
+            </div>
+
+            <!-- COMPONENTE MODERNO: SELETOR DROPDOWN DE INSERÇÃO DE FOTO DE PERFIL -->
+            <div class="form-group" style="background: var(--bg-surface); padding: 1.1rem; border-radius: var(--radius-md); border: 1px solid var(--border-highlight);">
+                <label class="form-label" style="color: var(--accent-cyan); font-weight: 700;">
+                    <i class="fa-solid fa-camera"></i> Método para Inserir a Foto de Perfil:
+                </label>
+
+                <!-- DROPDOWN DE ESCOLHA DO MÉTODO -->
+                <select class="form-select photo-method-select" style="margin-bottom: 0.8rem; font-weight: 600;" onchange="switchPhotoMethod(this)">
+                    <option value="file">📁 Upload do Disco Local (Arquivo)</option>
+                    <option value="url">🔗 URL da Imagem na Web</option>
+                    <option value="paste">📋 Copiar & Colar (Cut & Paste / Ctrl+V)</option>
+                    <option value="webcam">📷 Tirar Foto com a Câmera / Webcam</option>
+                </select>
+
+                <!-- 1. PAINEL UPLOAD DO DISCO LOCAL -->
+                <div class="photo-method-panel panel-file" style="display: block;">
+                    <input type="file" name="photo_file" accept="image/png, image/jpeg, image/webp" class="form-file-input" onchange="validateFileSize(this, 5)">
+                    <small style="font-size: 0.75rem; color: var(--text-dim); display: block; margin-top: 0.3rem;">
+                        <i class="fa-solid fa-circle-info"></i> Selecione uma imagem do seu computador (Máx: <strong>5 MB</strong>)
+                    </small>
+                </div>
+
+                <!-- 2. PAINEL URL -->
+                <div class="photo-method-panel panel-url" style="display: none;">
+                    <input type="text" name="photo_url" class="form-input" placeholder="https://exemplo.com/fotos/aluno.jpg">
+                    <small style="font-size: 0.75rem; color: var(--text-dim); display: block; margin-top: 0.3rem;">
+                        Cole a URL pública da imagem da internet.
+                    </small>
+                </div>
+
+                <!-- 3. PAINEL CUT & PASTE / COPIAR E COLAR -->
+                <div class="photo-method-panel panel-paste" style="display: none;">
+                    <div class="paste-dropzone" tabIndex="0" onpaste="handleImagePaste(event, this)" onclick="this.focus()">
+                        <i class="fa-solid fa-paste" style="font-size: 1.6rem; color: var(--accent-cyan); margin-bottom: 0.3rem;"></i>
+                        <div style="font-weight: 600;">Clique aqui e pressione <kbd style="background: rgba(255,255,255,0.15); padding: 2px 6px; border-radius: 4px;">Ctrl + V</kbd> para colar a imagem</div>
+                        <small style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-top: 0.2rem;">Suporta captura de tela, imagens copiadas do navegador ou editor.</small>
+                        <input type="hidden" name="photo_base64" class="paste-base64-input">
+                        <div class="paste-preview" style="display: none;"></div>
+                    </div>
+                </div>
+
+                <!-- 4. PAINEL WEBCAM / CÂMERA -->
+                <div class="photo-method-panel panel-webcam" style="display: none;">
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="startWebcam(this)">
+                        <i class="fa-solid fa-video"></i> Ativar Câmera do Dispositivo
+                    </button>
+                    <div class="webcam-container" style="display: none; margin-top: 0.6rem;">
+                        <video class="webcam-video" style="width: 100%; max-height: 180px; border-radius: var(--radius-sm); border: 1px solid var(--border-highlight);" autoplay playsinline></video>
+                        <button type="button" class="btn btn-emerald btn-sm" style="margin-top: 0.4rem; width: 100%;" onclick="captureWebcam(this)">
+                            <i class="fa-solid fa-camera"></i> Capturar Foto Agora
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TERMOS DE TRANSFUSÃO E LGPD -->
+            <div style="background: var(--bg-surface); padding: 1.1rem; border-radius: var(--radius-md); border: 1px solid var(--border-color); margin-bottom: 1.2rem; display: flex; flex-direction: column; gap: 0.8rem;">
+                <label class="form-checkbox" style="font-size: 0.85rem; color: white;">
+                    <input type="checkbox" name="blood_transfusion_approved" value="true" checked>
+                    <span><strong style="color: var(--accent-rose);"><i class="fa-solid fa-syringe"></i> Transfusão de Sangue:</strong> Autorizo procedimentos e transfusão de sangue emergencial em treinos/eventos.</span>
+                </label>
+
+                <label class="form-checkbox" style="font-size: 0.85rem; color: white;">
+                    <input type="checkbox" name="lgpd_consent" value="true" checked required>
+                    <span><strong style="color: var(--accent-cyan);"><i class="fa-solid fa-shield-halved"></i> Proteção de Dados (LGPD):</strong> Ciente e de acordo com o tratamento de dados pessoais conforme a Lei 13.709/2018.</span>
+                </label>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">Cadastrar Aluno</button>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL CADASTRAR DOJO -->
+<div class="modal-backdrop" id="modal-new-dojo">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 style="color: white;"><i class="fa-solid fa-torii-gate"></i> Cadastrar Novo Dojo</h3>
+            <button class="modal-close">&times;</button>
+        </div>
+        <form action="/api/dojos/create" method="POST" enctype="multipart/form-data">
+            <div class="form-group">
+                <label class="form-label">Nome do Dojo</label>
+                <input type="text" name="name" class="form-input" required placeholder="Ex: RioAiki Copacabana">
+            </div>
+            <div class="form-group">
+                <label class="form-label"><i class="fa-solid fa-building" style="color: var(--accent-cyan);"></i> Nome da Academia (Opcional)</label>
+                <input type="text" id="dojo-academy" name="academy" class="form-input" placeholder="Ex: Academia Top Defense">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Endereço Completo</label>
+                <input type="text" name="address" class="form-input" required placeholder="Rua de Exemplo, 123">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Cidade</label>
+                <input type="text" name="city" class="form-input" value="Rio de Janeiro" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label"><i class="fa-solid fa-user-tie" style="color: var(--accent-amber);"></i> Sensei Responsável pelo Dojo</label>
+                <select name="responsible_sensei_id" class="form-select">
+                    <option value="">-- Selecione o Sensei Responsável --</option>
+                    {% for s in senseis %}
+                        <option value="{{ s.id }}">{{ s.name }} ({{ s.belt_rank }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- COMPONENTE MODERNO: SELETOR DROPDOWN DE INSERÇÃO DE FOTO DO DOJO -->
+            <div class="form-group" style="background: var(--bg-surface); padding: 1.1rem; border-radius: var(--radius-md); border: 1px solid var(--border-highlight);">
+                <label class="form-label" style="color: var(--accent-cyan); font-weight: 700;">
+                    <i class="fa-solid fa-camera"></i> Método para Inserir a Foto do Dojo:
+                </label>
+
+                <!-- DROPDOWN DE ESCOLHA DO MÉTODO -->
+                <select class="form-select photo-method-select" style="margin-bottom: 0.8rem; font-weight: 600;" onchange="switchPhotoMethod(this)">
+                    <option value="file">📁 Upload do Disco Local (Arquivo)</option>
+                    <option value="url">🔗 URL da Imagem na Web</option>
+                    <option value="paste">📋 Copiar & Colar (Cut & Paste / Ctrl+V)</option>
+                    <option value="webcam">📷 Tirar Foto com a Câmera / Webcam</option>
+                </select>
+
+                <!-- 1. PAINEL UPLOAD DO DISCO LOCAL -->
+                <div class="photo-method-panel panel-file" style="display: block;">
+                    <input type="file" name="photo_file" accept="image/png, image/jpeg, image/webp" class="form-file-input" onchange="validateFileSize(this, 5)">
+                    <small style="font-size: 0.75rem; color: var(--text-dim); display: block; margin-top: 0.3rem;">
+                        <i class="fa-solid fa-circle-info"></i> Selecione uma imagem do seu computador (Máx: <strong>5 MB</strong>)
+                    </small>
+                </div>
+
+                <!-- 2. PAINEL URL -->
+                <div class="photo-method-panel panel-url" style="display: none;">
+                    <input type="text" name="photo_url" class="form-input" placeholder="https://exemplo.com/fotos/dojo.jpg">
+                    <small style="font-size: 0.75rem; color: var(--text-dim); display: block; margin-top: 0.3rem;">
+                        Cole a URL pública da imagem da internet.
+                    </small>
+                </div>
+
+                <!-- 3. PAINEL CUT & PASTE / COPIAR E COLAR -->
+                <div class="photo-method-panel panel-paste" style="display: none;">
+                    <div class="paste-dropzone" tabIndex="0" onpaste="handleImagePaste(event, this)" onclick="this.focus()">
+                        <i class="fa-solid fa-paste" style="font-size: 1.6rem; color: var(--accent-cyan); margin-bottom: 0.3rem;"></i>
+                        <div style="font-weight: 600;">Clique aqui e pressione <kbd style="background: rgba(255,255,255,0.15); padding: 2px 6px; border-radius: 4px;">Ctrl + V</kbd> para colar a imagem</div>
+                        <small style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-top: 0.2rem;">Suporta captura de tela, imagens copiadas do navegador ou editor.</small>
+                        <input type="hidden" name="photo_base64" class="paste-base64-input">
+                        <div class="paste-preview" style="display: none;"></div>
+                    </div>
+                </div>
+
+                <!-- 4. PAINEL WEBCAM / CÂMERA -->
+                <div class="photo-method-panel panel-webcam" style="display: none;">
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="startWebcam(this)">
+                        <i class="fa-solid fa-video"></i> Ativar Câmera do Dispositivo
+                    </button>
+                    <div class="webcam-container" style="display: none; margin-top: 0.6rem;">
+                        <video class="webcam-video" style="width: 100%; max-height: 180px; border-radius: var(--radius-sm); border: 1px solid var(--border-highlight);" autoplay playsinline></video>
+                        <button type="button" class="btn btn-emerald btn-sm" style="margin-top: 0.4rem; width: 100%;" onclick="captureWebcam(this)">
+                            <i class="fa-solid fa-camera"></i> Capturar Foto Agora
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Descrição</label>
+                <textarea name="description" class="form-input" rows="3" placeholder="Informações de tatame, vestiários e acomodações."></textarea>
+            </div>
+            <button type="submit" class="btn btn-emerald" style="width: 100%; margin-top: 1rem;">Salvar Dojo</button>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL EDITAR USUÁRIO / ALUNO -->
+<div class="modal-backdrop" id="modal-edit-user">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 style="color: white;"><i class="fa-solid fa-pen-to-square"></i> Editar Informações do Aluno</h3>
+            <button class="modal-close">&times;</button>
+        </div>
+        <form id="edit-user-form" action="" method="POST" enctype="multipart/form-data">
+            <input type="hidden" id="edit-user-id" name="user_id">
+            <div class="form-group">
+                <label class="form-label">Nome Completo</label>
+                <input type="text" id="edit-name" name="name" class="form-input" required placeholder="Ex: Roberto Silva">
+            </div>
+            <div class="form-group">
+                <label class="form-label">E-mail</label>
+                <input type="email" id="edit-email" name="email" class="form-input" required placeholder="roberto@email.com">
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                    <label class="form-label">Função</label>
+                    <select id="edit-role" name="role" class="form-select">
+                        <option value="STUDENT">Aluno</option>
+                        <option value="SENSEI">Sensei</option>
+                        <option value="ADMIN">Administrador</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Graduação Atual</label>
+                    <select id="edit-belt-rank" name="belt_rank" class="form-select">
+                        <option value="Mukyu (Iniciante)">Mukyu (Iniciante / Sem Faixa)</option>
+                        <option value="5º Kyu - Amarela">5º Kyu - Amarela</option>
+                        <option value="4º Kyu - Roxa">4º Kyu - Roxa</option>
+                        <option value="3º Kyu - Verde">3º Kyu - Verde</option>
+                        <option value="2º Kyu - Azul">2º Kyu - Azul</option>
+                        <option value="1º Kyu - Marrom">1º Kyu - Marrom</option>
+                        <option value="1º Dan - Preta">1º Dan - Preta (Shodan)</option>
+                        <option value="2º Dan - Preta">2º Dan - Preta (Nidan)</option>
+                        <option value="3º Dan - Preta">3º Dan - Preta (Sandan)</option>
+                        <option value="4º Dan - Preta">4º Dan - Preta (Yondan)</option>
+                        <option value="5º Dan - Preta">5º Dan - Preta (Godan)</option>
+                        <option value="6º Dan - Preta (Shihan)">6º Dan - Preta (Shihan / Rokudan)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                    <label class="form-label"><i class="fa-solid fa-cake-candles" style="color: #38BDF8;"></i> Data de Nascimento</label>
+                    <input type="date" id="edit-birth-date" name="birth_date" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label class="form-label"><i class="fa-solid fa-calendar-check" style="color: var(--accent-cyan);"></i> Data de Início no Dojo</label>
+                    <input type="date" id="edit-start-date" name="start_date" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label class="form-label"><i class="fa-solid fa-award" style="color: var(--accent-amber);"></i> Data do Último Exame</label>
+                    <input type="date" id="edit-last-exam-date" name="last_exam_date" class="form-input">
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                    <label class="form-label">Dojo de Origem</label>
+                    <select id="edit-dojo-id" name="dojo_id" class="form-select" onchange="updateDojoSensei(this, 'edit-supervisor-sensei-display', 'edit-supervisor-sensei-hidden')">
+                        {% for dojo in dojos %}
+                            <option value="{{ dojo.id }}" data-responsible-sensei-id="{{ dojo.responsible_sensei_id or '' }}" data-responsible-sensei-name="{% if dojo.responsible_sensei %}{{ dojo.responsible_sensei.name }} ({{ dojo.responsible_sensei.belt_rank }}){% else %}Sem Sensei Responsável{% endif %}">{{ dojo.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" style="display: flex; align-items: center; gap: 0.4rem;">
+                        <i class="fa-solid fa-lock" style="color: var(--accent-amber); font-size: 0.8rem;"></i> Sensei Responsável
+                    </label>
+                    <input type="text" id="edit-supervisor-sensei-display" class="form-input" readonly style="opacity: 0.85; cursor: not-allowed; background: rgba(255, 255, 255, 0.05); font-weight: 500;" placeholder="Sem Sensei Responsável">
+                    <input type="hidden" id="edit-supervisor-sensei-hidden" name="supervisor_sensei_id">
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                    <label class="form-label"><i class="fa-solid fa-dumbbell" style="color: var(--accent-emerald);"></i> Total de Treinos</label>
+                    <input type="number" id="edit-total-attendances" name="total_attendances" class="form-input" min="0" value="0">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">CPF (LGPD)</label>
+                    <input type="text" id="edit-cpf" name="cpf" class="form-input" placeholder="123.456.789-00">
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                <div class="form-group">
+                    <label class="form-label">Status da Conta</label>
+                    <select id="edit-is-active" name="is_active" class="form-select">
+                        <option value="true">Ativo</option>
+                        <option value="false">Inativo</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Apto a Exame?</label>
+                    <select id="edit-ready-for-exam" name="ready_for_exam" class="form-select">
+                        <option value="false">Não / Em Evolução</option>
+                        <option value="true">Sim / Apto</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- INFORMAÇÕES MÉDICAS E CONTATOS DE EMERGÊNCIA NO EDITAR -->
+            <div style="background: rgba(225, 29, 72, 0.08); border: 1px solid rgba(225, 29, 72, 0.3); padding: 1.1rem; border-radius: var(--radius-md); margin-bottom: 1.2rem;">
+                <h4 style="color: var(--accent-rose); font-size: 0.95rem; margin-bottom: 0.8rem; display: flex; align-items: center; gap: 0.5rem;">
+                    <i class="fa-solid fa-notes-medical"></i> Informações Médicas Básicas & Emergência
+                </h4>
+                
+                <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 1rem; margin-bottom: 0.8rem;">
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label"><i class="fa-solid fa-droplet" style="color: var(--accent-rose);"></i> Tipo Sangüíneo</label>
+                        <select id="edit-blood-type" name="blood_type" class="form-select">
+                            <option value="Não Informado">Não Informado</option>
+                            <option value="A+">A+</option>
+                            <option value="A-">A-</option>
+                            <option value="B+">B+</option>
+                            <option value="B-">B-</option>
+                            <option value="AB+">AB+</option>
+                            <option value="AB-">AB-</option>
+                            <option value="O+">O+</option>
+                            <option value="O-">O-</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label"><i class="fa-solid fa-user-ninja"></i> Contato de Emergência</label>
+                        <input type="text" id="edit-emergency-contact-name" name="emergency_contact_name" class="form-input" placeholder="Ex: Maria Silva (Mãe)">
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 0.8rem;">
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label"><i class="fa-solid fa-phone"></i> Tel. de Emergência</label>
+                        <input type="text" id="edit-emergency-contact-phone" name="emergency_contact_phone" class="form-input" placeholder="(21) 99999-8888">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label"><i class="fa-solid fa-suitcase-medical"></i> Alergias / Condições</label>
+                        <input type="text" id="edit-medical-notes" name="medical_notes" class="form-input" placeholder="Ex: Alérgico a Penicilina">
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label"><i class="fa-solid fa-notes-medical" style="color: var(--accent-rose);"></i> Plano de Saúde</label>
+                    <input type="text" id="edit-health-insurance" name="health_insurance" class="form-input" placeholder="Ex: Bradesco Saúde / Unimed / SulAmérica / Nenhum">
+                </div>
+            </div>
+
+            <!-- FOTO DE PERFIL NO EDITAR -->
+            <div class="form-group" style="background: var(--bg-surface); padding: 1.1rem; border-radius: var(--radius-md); border: 1px solid var(--border-highlight);">
+                <label class="form-label" style="color: var(--accent-cyan); font-weight: 700;">
+                    <i class="fa-solid fa-camera"></i> Alterar Foto de Perfil (Opcional):
+                </label>
+
+                <select class="form-select photo-method-select" style="margin-bottom: 0.8rem; font-weight: 600;" onchange="switchPhotoMethod(this)">
+                    <option value="file">📁 Upload do Disco Local (Arquivo)</option>
+                    <option value="url">🔗 URL da Imagem na Web</option>
+                    <option value="paste">📋 Copiar & Colar (Cut & Paste / Ctrl+V)</option>
+                    <option value="webcam">📷 Tirar Foto com a Câmera / Webcam</option>
+                </select>
+
+                <div class="photo-method-panel panel-file" style="display: block;">
+                    <input type="file" name="photo_file" accept="image/png, image/jpeg, image/webp" class="form-file-input" onchange="validateFileSize(this, 5)">
+                </div>
+
+                <div class="photo-method-panel panel-url" style="display: none;">
+                    <input type="text" id="edit-photo-url" name="photo_url" class="form-input" placeholder="https://exemplo.com/fotos/aluno.jpg">
+                </div>
+
+                <div class="photo-method-panel panel-paste" style="display: none;">
+                    <div class="paste-dropzone" tabIndex="0" onpaste="handleImagePaste(event, this)" onclick="this.focus()">
+                        <i class="fa-solid fa-paste" style="font-size: 1.6rem; color: var(--accent-cyan); margin-bottom: 0.3rem;"></i>
+                        <div style="font-weight: 600;">Clique aqui e pressione <kbd style="background: rgba(255,255,255,0.15); padding: 2px 6px; border-radius: 4px;">Ctrl + V</kbd></div>
+                        <input type="hidden" name="photo_base64" class="paste-base64-input">
+                        <div class="paste-preview" style="display: none;"></div>
+                    </div>
+                </div>
+
+                <div class="photo-method-panel panel-webcam" style="display: none;">
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="startWebcam(this)">
+                        <i class="fa-solid fa-video"></i> Ativar Câmera do Dispositivo
+                    </button>
+                    <div class="webcam-container" style="display: none; margin-top: 0.6rem;">
+                        <video class="webcam-video" style="width: 100%; max-height: 180px; border-radius: var(--radius-sm); border: 1px solid var(--border-highlight);" autoplay playsinline></video>
+                        <button type="button" class="btn btn-emerald btn-sm" style="margin-top: 0.4rem; width: 100%;" onclick="captureWebcam(this)">
+                            <i class="fa-solid fa-camera"></i> Capturar Foto Agora
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TERMOS DE TRANSFUSÃO E LGPD NO EDITAR -->
+            <div style="background: var(--bg-surface); padding: 1.1rem; border-radius: var(--radius-md); border: 1px solid var(--border-color); margin-bottom: 1.2rem; display: flex; flex-direction: column; gap: 0.8rem;">
+                <label class="form-checkbox" style="font-size: 0.85rem; color: white;">
+                    <input type="checkbox" id="edit-blood-transfusion-approved" name="blood_transfusion_approved" value="true">
+                    <span><strong style="color: var(--accent-rose);"><i class="fa-solid fa-syringe"></i> Transfusão de Sangue:</strong> Autorizo procedimentos e transfusão de sangue emergencial em treinos/eventos.</span>
+                </label>
+
+                <label class="form-checkbox" style="font-size: 0.85rem; color: white;">
+                    <input type="checkbox" id="edit-lgpd-consent" name="lgpd_consent" value="true" required>
+                    <span><strong style="color: var(--accent-cyan);"><i class="fa-solid fa-shield-halved"></i> Proteção de Dados (LGPD):</strong> Ciente e de acordo com o tratamento de dados pessoais conforme a Lei 13.709/2018.</span>
+                </label>
+            </div>
+
+            <!-- REDEFINIÇÃO DE SENHA POR ADMIN / SENSEI -->
+            {% if current_user and current_user.role in ['ADMIN', 'SENSEI'] %}
+            <div class="form-group" style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.3); padding: 1.1rem; border-radius: var(--radius-md); margin-bottom: 1.2rem;">
+                <label class="form-label" style="color: var(--accent-amber); font-weight: 700; display: flex; align-items: center; gap: 0.4rem;">
+                    <i class="fa-solid fa-key"></i> Resetar Senha do Usuário (ADMIN / Sensei):
+                </label>
+                <div style="position: relative; display: flex; align-items: center;">
+                    <input type="password" name="new_password" id="admin-reset-user-password" class="form-input" placeholder="Digite uma nova senha para o usuário (ou deixe em branco)" style="padding-right: 2.5rem; width: 100%;">
+                    <button type="button" onclick="togglePasswordVisibility('admin-reset-user-password', 'toggle-admin-user-pwd-icon')" style="position: absolute; right: 0.75rem; background: none; border: none; color: var(--text-dim); cursor: pointer; padding: 0.25rem; font-size: 1rem; display: flex; align-items: center; justify-content: center; transition: color 0.2s;" title="Mostrar / Ocultar Senha">
+                        <i class="fa-solid fa-eye" id="toggle-admin-user-pwd-icon"></i>
+                    </button>
+                </div>
+                <small style="color: var(--text-muted); font-size: 0.725rem; display: block; margin-top: 0.3rem;">
+                    <i class="fa-solid fa-circle-info"></i> Preencha este campo apenas se desejar redefinir a senha do praticante.
+                </small>
+            </div>
+            {% endif %}
+
+            <div style="display: flex; gap: 0.8rem; margin-top: 1rem;">
+                <button type="submit" class="btn btn-primary" style="flex: 1;"><i class="fa-solid fa-floppy-disk"></i> Salvar Alterações</button>
+                <button type="button" class="btn btn-rose" style="flex: 1;" onclick="confirmDeleteUserFromModal()"><i class="fa-solid fa-user-xmark"></i> Excluir Cadastro</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL EDITAR DOJO -->
+<div class="modal-backdrop" id="modal-edit-dojo">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 style="color: white;"><i class="fa-solid fa-pen-to-square"></i> Editar Dojo</h3>
+            <button class="modal-close">&times;</button>
+        </div>
+        <form id="edit-dojo-form" action="" method="POST" enctype="multipart/form-data">
+            <div class="form-group">
+                <label class="form-label">Nome do Dojo</label>
+                <input type="text" id="edit-dojo-name" name="name" class="form-input" required placeholder="Ex: RioAiki Copacabana">
+            </div>
+            <div class="form-group">
+                <label class="form-label"><i class="fa-solid fa-building" style="color: var(--accent-cyan);"></i> Nome da Academia (Opcional)</label>
+                <input type="text" id="edit-dojo-academy" name="academy" class="form-input" placeholder="Ex: Academia Top Defense">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Endereço Completo</label>
+                <input type="text" id="edit-dojo-address" name="address" class="form-input" required placeholder="Rua de Exemplo, 123">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Cidade</label>
+                <input type="text" id="edit-dojo-city" name="city" class="form-input" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label"><i class="fa-solid fa-user-tie" style="color: var(--accent-amber);"></i> Sensei Responsável pelo Dojo</label>
+                <select id="edit-dojo-responsible-sensei" name="responsible_sensei_id" class="form-select">
+                    <option value="">-- Selecione o Sensei Responsável --</option>
+                    {% for s in senseis %}
+                        <option value="{{ s.id }}">{{ s.name }} ({{ s.belt_rank }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group" style="background: var(--bg-surface); padding: 1.1rem; border-radius: var(--radius-md); border: 1px solid var(--border-highlight);">
+                <label class="form-label" style="color: var(--accent-cyan); font-weight: 700;">
+                    <i class="fa-solid fa-camera"></i> Alterar Foto do Dojo (Opcional):
+                </label>
+                <select class="form-select photo-method-select" style="margin-bottom: 0.8rem; font-weight: 600;" onchange="switchPhotoMethod(this)">
+                    <option value="file">📁 Upload do Disco Local (Arquivo)</option>
+                    <option value="url">🔗 URL da Imagem na Web</option>
+                    <option value="paste">📋 Copiar & Colar (Cut & Paste / Ctrl+V)</option>
+                    <option value="webcam">📷 Tirar Foto com a Câmera / Webcam</option>
+                </select>
+                <div class="photo-method-panel panel-file" style="display: block;">
+                    <input type="file" name="photo_file" accept="image/png, image/jpeg, image/webp" class="form-file-input" onchange="validateFileSize(this, 5)">
+                </div>
+                <div class="photo-method-panel panel-url" style="display: none;">
+                    <input type="text" id="edit-dojo-photo-url" name="photo_url" class="form-input" placeholder="https://exemplo.com/fotos/dojo.jpg">
+                </div>
+                <div class="photo-method-panel panel-paste" style="display: none;">
+                    <div class="paste-dropzone" tabIndex="0" onpaste="handleImagePaste(event, this)" onclick="this.focus()">
+                        <i class="fa-solid fa-paste" style="font-size: 1.6rem; color: var(--accent-cyan);"></i>
+                        <input type="hidden" name="photo_base64" class="paste-base64-input">
+                        <div class="paste-preview" style="display: none;"></div>
+                    </div>
+                </div>
+                <div class="photo-method-panel panel-webcam" style="display: none;">
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="startWebcam(this)">
+                        <i class="fa-solid fa-video"></i> Ativar Câmera
+                    </button>
+                    <div class="webcam-container" style="display: none; margin-top: 0.6rem;">
+                        <video class="webcam-video" style="width: 100%; max-height: 180px;" autoplay playsinline></video>
+                        <button type="button" class="btn btn-emerald btn-sm" style="margin-top: 0.4rem; width: 100%;" onclick="captureWebcam(this)">
+                            Capturar Foto
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Descrição</label>
+                <textarea id="edit-dojo-description" name="description" class="form-input" rows="3" placeholder="Informações de tatame, vestiários e acomodações."></textarea>
+            </div>
+            <div style="display: flex; gap: 0.8rem; margin-top: 1rem;">
+                <button type="submit" class="btn btn-emerald" style="flex: 1;"><i class="fa-solid fa-floppy-disk"></i> Salvar Dojo</button>
+                <button type="button" class="btn btn-rose" style="flex: 1;" onclick="confirmDeleteDojoFromModal()"><i class="fa-solid fa-trash-can"></i> Excluir Dojo</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL FLUTUANTE DE HISTÓRICO DE PRESENÇAS / AULAS DO ALUNO -->
+<div class="modal-backdrop" id="modal-student-attendances">
+    <div class="modal-content" style="max-width: 950px; width: 95%;">
+        <div class="modal-header" style="border-bottom: 1px solid var(--border-color); padding-bottom: 0.8rem;">
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <img id="att-modal-user-photo" src="" style="width: 44px; height: 44px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent-cyan);">
+                <div>
+                    <h3 style="color: white; margin: 0; font-size: 1.1rem; display: flex; align-items: center; gap: 0.5rem;">
+                        <i class="fa-solid fa-calendar-days" style="color: var(--accent-cyan);"></i> <span id="att-modal-user-name">Histórico de Aulas</span>
+                    </h3>
+                    <div style="display: flex; gap: 0.5rem; margin-top: 0.2rem; align-items: center;">
+                        <span id="att-modal-user-rank" class="badge badge-cyan" style="font-size: 0.7rem;"></span>
+                        <span id="att-modal-user-dojo" style="color: var(--text-muted); font-size: 0.775rem;"></span>
+                    </div>
+                </div>
+            </div>
+            <button class="modal-close" onclick="closeStudentAttendancesModal()">&times;</button>
+        </div>
+
+        <div style="padding: 1rem 0 0.5rem 0;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem; background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.2); padding: 0.75rem 1rem; border-radius: var(--radius-sm);">
+                <div style="color: white; font-size: 0.95rem; font-weight: 700; display: flex; align-items: center; gap: 0.4rem;">
+                    <i class="fa-solid fa-clipboard-user" style="color: var(--accent-cyan);"></i> Registro de Aulas
+                </div>
+                <span id="att-modal-total-count" class="badge badge-emerald" style="font-size: 0.95rem; font-weight: 700; padding: 4px 12px; border-radius: 16px;">
+                    0 Presenças
+                </span>
+            </div>
+
+            <!-- BARRA DE FILTROS: DATA, DOJO E SENSEI -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.75rem; margin-bottom: 0.8rem; background: var(--bg-surface); padding: 0.75rem 1rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+                <div>
+                    <label style="font-size: 0.75rem; color: var(--accent-cyan); font-weight: 700; display: block; margin-bottom: 0.25rem;">
+                        <i class="fa-solid fa-calendar"></i> Filtrar Data:
+                    </label>
+                    <input type="text" id="att-filter-date" class="form-input" placeholder="Ex: 2026, 07/2026..." style="font-size: 0.8rem; padding: 0.35rem 0.6rem;" onkeyup="applyStudentAttendancesFilter()">
+                </div>
+                <div>
+                    <label style="font-size: 0.75rem; color: var(--accent-cyan); font-weight: 700; display: block; margin-bottom: 0.25rem;">
+                        <i class="fa-solid fa-torii-gate"></i> Filtrar Dojo:
+                    </label>
+                    <select id="att-filter-dojo" class="form-select" style="font-size: 0.8rem; padding: 0.35rem 0.6rem;" onchange="applyStudentAttendancesFilter()">
+                        <option value="all">Todos os Dojos</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="font-size: 0.75rem; color: var(--accent-cyan); font-weight: 700; display: block; margin-bottom: 0.25rem;">
+                        <i class="fa-solid fa-user-tie"></i> Filtrar Sensei:
+                    </label>
+                    <select id="att-filter-sensei" class="form-select" style="font-size: 0.8rem; padding: 0.35rem 0.6rem;" onchange="applyStudentAttendancesFilter()">
+                        <option value="all">Todos os Senseis</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- TABELA DE AULAS / PRESENÇAS -->
+            <div style="max-height: 400px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+                <table class="data-table" style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem;">
+                    <thead style="position: sticky; top: 0; background: var(--bg-surface); z-index: 10; border-bottom: 1px solid var(--border-color);">
+                        <tr>
+                            <th style="padding: 0.75rem; color: var(--accent-cyan); font-weight: 700;"><i class="fa-solid fa-calendar"></i> DATA DA AULA</th>
+                            <th style="padding: 0.75rem; color: var(--accent-cyan); font-weight: 700;"><i class="fa-solid fa-torii-gate"></i> DOJO</th>
+                            <th style="padding: 0.75rem; color: var(--accent-cyan); font-weight: 700;"><i class="fa-solid fa-clock"></i> HORÁRIO / TREINO</th>
+                            <th style="padding: 0.75rem; color: var(--accent-cyan); font-weight: 700;"><i class="fa-solid fa-user-tie"></i> SENSEI</th>
+                        </tr>
+                    </thead>
+                    <tbody id="att-modal-tbody">
+                        <!-- Gerado via JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL FLUTUANTE DE DETALHES DO DOJO -->
+<div class="modal-backdrop" id="modal-dojo-details" onclick="if(event.target === this) this.classList.remove('active')">
+    <div class="modal-content" style="max-width: 900px; width: 95%; max-height: 90vh; overflow-y: auto; padding: 0; position: relative;">
+        <!-- BANNER DE CAPA E BOTÃO FECHAR -->
+        <div style="position: relative; width: 100%; height: 220px; background: var(--bg-surface); overflow: hidden;">
+            <img id="detail-dojo-photo" src="" style="width: 100%; height: 100%; object-fit: cover;">
+            <div style="position: absolute; inset: 0; background: linear-gradient(to top, rgba(15, 23, 42, 0.95) 0%, rgba(15, 23, 42, 0.3) 100%);"></div>
+            <button class="modal-close" onclick="document.getElementById('modal-dojo-details').classList.remove('active')" style="position: absolute; top: 15px; right: 20px; z-index: 10; background: rgba(0,0,0,0.6); border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; color: white; border: 1px solid rgba(255,255,255,0.2); font-size: 1.2rem; cursor: pointer;">&times;</button>
+            <div style="position: absolute; bottom: 20px; left: 25px; right: 25px; color: white;">
+                <span id="detail-dojo-academy-badge" class="badge badge-cyan" style="display: inline-block; margin-bottom: 0.4rem; font-weight: 700;"></span>
+                <h2 id="detail-dojo-name" style="font-size: 1.8rem; font-weight: 800; color: white; margin: 0; text-shadow: 0 2px 4px rgba(0,0,0,0.8);"></h2>
+                <p id="detail-dojo-address" style="font-size: 0.9rem; color: var(--text-muted); margin: 0.2rem 0 0 0;"><i class="fa-solid fa-location-dot" style="color: var(--accent-cyan);"></i> </p>
+            </div>
+        </div>
+
+        <div style="padding: 1.8rem;">
+            <!-- DESCRIÇÃO DO DOJO -->
+            <div id="detail-dojo-desc-container" style="margin-bottom: 1.5rem; background: var(--bg-surface); padding: 1rem 1.2rem; border-radius: var(--radius-md); border: 1px solid var(--border-highlight);">
+                <h4 style="color: var(--accent-cyan); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 0.4rem 0;"><i class="fa-solid fa-align-left"></i> Sobre o Dojo</h4>
+                <p id="detail-dojo-description" style="font-size: 0.95rem; color: var(--text-color); margin: 0; line-height: 1.5;"></p>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.2rem; margin-bottom: 1.5rem;">
+                <!-- SENSEI RESPONSÁVEL -->
+                <div style="background: var(--bg-surface); padding: 1.2rem; border-radius: var(--radius-md); border: 1px solid rgba(245, 158, 11, 0.4);">
+                    <h4 style="color: var(--accent-amber); font-size: 0.95rem; margin: 0 0 0.8rem 0; display: flex; align-items: center; gap: 0.5rem;">
+                        <i class="fa-solid fa-user-tie"></i> Sensei Responsável
+                    </h4>
+                    <div id="detail-dojo-sensei-box">
+                        <!-- Renderizado via JS -->
+                    </div>
+                </div>
+
+                <!-- INSTRUTORES -->
+                <div style="background: var(--bg-surface); padding: 1.2rem; border-radius: var(--radius-md); border: 1px solid rgba(56, 189, 248, 0.4);">
+                    <h4 style="color: var(--accent-cyan); font-size: 0.95rem; margin: 0 0 0.8rem 0; display: flex; align-items: center; gap: 0.5rem;">
+                        <i class="fa-solid fa-chalkboard-user"></i> Instrutores das Turmas
+                    </h4>
+                    <div id="detail-dojo-instructors-box">
+                        <!-- Renderizado via JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- ALUNOS MATRICULADOS -->
+            <div style="background: var(--bg-surface); padding: 1.2rem; border-radius: var(--radius-md); border: 1px solid var(--border-highlight);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h4 style="color: white; font-size: 1.05rem; margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                        <i class="fa-solid fa-users" style="color: var(--accent-cyan);"></i> Alunos & Praticantes Matriculados
+                    </h4>
+                    <span id="detail-dojo-students-count" class="badge badge-cyan" style="font-size: 0.85rem; font-weight: 700;">0 Alunos</span>
+                </div>
+                <div style="max-height: 280px; overflow-y: auto;">
+                    <table class="table" style="width: 100%; font-size: 0.88rem;">
+                        <thead style="position: sticky; top: 0; background: var(--bg-card); z-index: 5;">
+                            <tr>
+                                <th>Aluno</th>
+                                <th>Faixa / Graduação</th>
+                                <th>Treinos</th>
+                                <th>Status Exame</th>
+                            </tr>
+                        </thead>
+                        <tbody id="detail-dojo-students-list">
+                            <!-- Renderizado via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function getRequiredAttendances(beltRank) {
+    if (!beltRank) return 60;
+    const r = beltRank.toLowerCase();
+    if (r.includes('yondan') || r.includes('4º dan') || r.includes('4 dan') || r.includes('godan') || r.includes('5º dan') || r.includes('rokudan')) return 800;
+    if (r.includes('nidan') || r.includes('2º dan') || r.includes('2 dan') || r.includes('sandan') || r.includes('3º dan') || r.includes('3 dan')) return 600;
+    if (r.includes('shodan') || r.includes('1º dan') || r.includes('1 dan')) return 400;
+    if (r.includes('1º') || r.includes('1 kyu') || r.includes('marrom') || r.includes('castanha')) return 100;
+    if (r.includes('2º') || r.includes('2 kyu') || r.includes('azul')) return 90;
+    if (r.includes('3º') || r.includes('3 kyu') || r.includes('verde')) return 60;
+    if (r.includes('4º') || r.includes('4 kyu') || r.includes('roxa')) return 60;
+    if (r.includes('5º') || r.includes('5 kyu') || r.includes('amarela')) return 40;
+    return 60;
+}
+
+// Janela Modal de Detalhes Completos do Dojo (Sensei, Instrutores, Alunos)
+function openDojoDetailsModal(data) {
+    const modal = document.getElementById('modal-dojo-details');
+    if (!modal) return;
+
+    // Foto e Cabeçalho
+    document.getElementById('detail-dojo-photo').src = data.photo_url || 'https://images.unsplash.com/photo-1518611012118-696072aa579a?w=600';
+    document.getElementById('detail-dojo-name').textContent = data.name;
+    document.getElementById('detail-dojo-address').innerHTML = `<i class="fa-solid fa-location-dot" style="color: var(--accent-cyan);"></i> ${data.address} · ${data.city}`;
+    
+    const academyBadge = document.getElementById('detail-dojo-academy-badge');
+    if (data.academy) {
+        academyBadge.textContent = data.academy;
+        academyBadge.style.display = 'inline-block';
+    } else {
+        academyBadge.style.display = 'none';
+    }
+
+    // Descrição
+    const descBox = document.getElementById('detail-dojo-desc-container');
+    if (data.description && data.description.trim()) {
+        document.getElementById('detail-dojo-description').textContent = data.description;
+        descBox.style.display = 'block';
+    } else {
+        descBox.style.display = 'none';
+    }
+
+    // Sensei Responsável
+    const senseiBox = document.getElementById('detail-dojo-sensei-box');
+    if (data.responsible_sensei && data.responsible_sensei.name) {
+        const s = data.responsible_sensei;
+        senseiBox.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 0.9rem;">
+                <img src="${s.photo_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'}" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent-amber);">
+                <div>
+                    <strong style="color: white; font-size: 1rem; display: block;">${s.name}</strong>
+                    <span class="badge badge-amber" style="font-size: 0.75rem; margin-top: 0.25rem; display: inline-block;">${s.belt_rank || 'Sensei'}</span>
+                    ${s.email ? `<br><small style="color: var(--text-muted); font-size: 0.75rem;"><i class="fa-solid fa-envelope"></i> ${s.email}</small>` : ''}
+                    ${s.phone ? `<br><small style="color: var(--text-muted); font-size: 0.75rem;"><i class="fa-solid fa-phone"></i> ${s.phone}</small>` : ''}
+                </div>
+            </div>
+        `;
+    } else {
+        senseiBox.innerHTML = `
+            <span style="color: var(--text-dim); font-size: 0.9rem; font-style: italic;">
+                <i class="fa-solid fa-circle-info"></i> Nenhum Sensei Responsável atribuído no momento.
+            </span>
+        `;
+    }
+
+    // Instrutores das Turmas
+    const instBox = document.getElementById('detail-dojo-instructors-box');
+    if (data.instructors && data.instructors.length > 0) {
+        instBox.innerHTML = data.instructors.map(inst => `
+            <div style="display: flex; align-items: center; gap: 0.7rem; margin-bottom: 0.6rem;">
+                <img src="${inst.photo_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'}" style="width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 1px solid var(--accent-cyan);">
+                <div>
+                    <strong style="color: white; font-size: 0.9rem; display: block;">${inst.name}</strong>
+                    <small style="color: var(--accent-cyan); font-size: 0.75rem;">${inst.belt_rank}</small>
+                </div>
+            </div>
+        `).join('');
+    } else {
+        instBox.innerHTML = `
+            <span style="color: var(--text-dim); font-size: 0.9rem; font-style: italic;">
+                <i class="fa-solid fa-circle-info"></i> Senseis cadastrados nas turmas do dojo.
+            </span>
+        `;
+    }
+
+    window.CURRENT_DOJO_DETAILS = data;
+
+    // Alunos Matriculados
+    const studentsList = document.getElementById('detail-dojo-students-list');
+    const studentsCount = document.getElementById('detail-dojo-students-count');
+    studentsCount.textContent = `${data.students ? data.students.length : 0} Alunos`;
+
+    const canManage = {% if current_user and current_user.role in ['ADMIN', 'SENSEI'] %}true{% else %}false{% endif %};
+
+    if (data.students && data.students.length > 0) {
+        studentsList.innerHTML = data.students.map((st, index) => {
+            const req = st.req_attendances || getRequiredAttendances(st.belt_rank);
+            const nameHtml = canManage 
+                ? `<a href="javascript:void(0)" onclick="openEditStudentModalFromDetail(${index})" style="color: var(--accent-cyan); font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 0.35rem;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'" title="Clique para abrir as informações do aluno">${st.name} <i class="fa-solid fa-up-right-from-square" style="font-size: 0.75rem;"></i></a>`
+                : `<strong style="color: white;">${st.name}</strong>`;
+
+            return `
+            <tr>
+                <td style="display: flex; align-items: center; gap: 0.65rem;">
+                    <img src="${st.photo_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100'}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;">
+                    <div>
+                        ${nameHtml}
+                        <br><small style="color: var(--text-dim); font-size: 0.75rem;">${st.email}</small>
+                    </div>
+                </td>
+                <td><span class="badge badge-primary" style="font-size: 0.75rem;">${st.belt_rank}</span></td>
+                <td><strong style="color: var(--accent-cyan); font-size: 1rem;">${st.total_attendances}</strong> / ${req} treinos</td>
+                <td>
+                    ${st.ready_for_exam 
+                        ? '<span class="badge badge-emerald" style="font-size: 0.75rem;"><i class="fa-solid fa-circle-check"></i> Apto a Exame</span>' 
+                        : '<span class="badge badge-secondary" style="font-size: 0.75rem;">Em Evolução</span>'}
+                </td>
+            </tr>
+            `;
+        }).join('');
+    } else {
+        studentsList.innerHTML = `
+            <tr>
+                <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">
+                    <i class="fa-solid fa-info-circle"></i> Nenhum aluno matriculado neste dojo até o momento.
+                </td>
+            </tr>
+        `;
+    }
+
+    modal.classList.add('active');
+}
+
+function openEditStudentModalFromDetail(index) {
+    if (!window.CURRENT_DOJO_DETAILS || !window.CURRENT_DOJO_DETAILS.students) return;
+    const student = window.CURRENT_DOJO_DETAILS.students[index];
+    if (!student) return;
+
+    // Fechar modal de detalhes do dojo
+    const detailsModal = document.getElementById('modal-dojo-details');
+    if (detailsModal) detailsModal.classList.remove('active');
+
+    // Abrir modal de informações do aluno
+    openEditStudentModal(student);
+}
+</script>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Open Edit Dojo Modal
+function openEditDojoModal(elem) {
+    const modal = document.getElementById('modal-edit-dojo');
+    const form = document.getElementById('edit-dojo-form');
+    if (!modal || !form) return;
+
+    let id, name, academy, address, city, description, photo_url, responsible_sensei_id;
+
+    if (elem instanceof HTMLElement) {
+        id = elem.dataset.id;
+        name = elem.dataset.name;
+        academy = elem.dataset.academy;
+        address = elem.dataset.address;
+        city = elem.dataset.city;
+        description = elem.dataset.description;
+        photo_url = elem.dataset.photo;
+        responsible_sensei_id = elem.dataset.responsibleSenseiId;
+    } else if (elem && typeof elem === 'object') {
+        id = elem.id;
+        name = elem.name;
+        academy = elem.academy;
+        address = elem.address;
+        city = elem.city;
+        description = elem.description;
+        photo_url = elem.photo_url;
+        responsible_sensei_id = elem.responsible_sensei_id;
+    }
+
+    form.action = `/api/dojos/${id}/update`;
+    document.getElementById('edit-dojo-name').value = name || '';
+    document.getElementById('edit-dojo-academy').value = academy || '';
+    document.getElementById('edit-dojo-address').value = address || '';
+    document.getElementById('edit-dojo-city').value = city || 'Rio de Janeiro';
+    document.getElementById('edit-dojo-description').value = description || '';
+    document.getElementById('edit-dojo-photo-url').value = photo_url || '';
+
+    const respSelect = document.getElementById('edit-dojo-responsible-sensei');
+    if (respSelect) {
+        respSelect.value = (responsible_sensei_id && responsible_sensei_id !== 'null' && responsible_sensei_id !== 'None') ? String(responsible_sensei_id) : '';
+    }
+
+    modal.classList.add('active');
+}
+
+// Confirm and Execute Delete Dojo
+async function confirmDeleteDojo(dojoId, dojoName) {
+    if (!confirm(`Tem certeza que deseja excluir o dojo "${dojoName}"?\n\nOs membros e alunos associados a este dojo não serão apagados, apenas desvinculados.`)) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/dojos/${dojoId}/delete`, {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json'
+            }
+        });
+        const result = await response.json();
+        if (response.ok && (result.status === 'success' || !result.error)) {
+            // Fechar modal de edição se estiver aberto
+            const editModal = document.getElementById('modal-edit-dojo');
+            if (editModal) editModal.classList.remove('active');
+
+            // Remover o card do dojo dinamicamente do DOM
+            const btn = document.querySelector(`button[data-id="${dojoId}"]`);
+            const card = btn ? btn.closest('.card') : null;
+            if (card) {
+                card.style.transition = 'all 0.3s ease';
+                card.style.opacity = '0';
+                card.style.transform = 'scale(0.95)';
+                setTimeout(() => card.remove(), 300);
+            } else {
+                window.location.reload();
+            }
+        } else {
+            alert(result.error || result.message || 'Erro ao excluir o dojo.');
+        }
+    } catch (err) {
+        console.error(err);
+        alert('Ocorreu um erro ao processar a exclusão do dojo.');
+    }
+}
+
+function confirmDeleteDojoFromModal() {
+    const name = document.getElementById('edit-dojo-name').value || 'este dojo';
+    const form = document.getElementById('edit-dojo-form');
+    if (!form || !form.action) return;
+
+    const match = form.action.match(/\/api\/dojos\/(\d+)\/update/);
+    if (match && match[1]) {
+        confirmDeleteDojo(match[1], name);
+    }
+}
+
+// Confirm and Execute Delete User / Sensei
+async function confirmDeleteUser(userId, userName) {
+    if (!confirm(`Tem certeza que deseja excluir permanentemente o cadastro de "${userName}"?\n\nEsta ação removerá o usuário e não poderá ser desfeita.`)) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/users/${userId}/delete`, {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json'
+            }
+        });
+        const result = await response.json();
+        if (response.ok && (result.status === 'success' || !result.error)) {
+            // Fechar modal se aberto
+            const editModal = document.getElementById('modal-edit-user');
+            if (editModal) editModal.classList.remove('active');
+
+            // Remover linha ou card do usuário do DOM
+            const userElement = document.querySelector(`[data-user-id="${userId}"]`) ||
+                                document.querySelector(`button[onclick*="confirmDeleteUser(${userId}"]`)?.closest('.card, tr');
+            if (userElement) {
+                userElement.style.transition = 'all 0.3s ease';
+                userElement.style.opacity = '0';
+                setTimeout(() => userElement.remove(), 300);
+            } else {
+                window.location.reload();
+            }
+        } else {
+            alert(result.error || result.message || 'Erro ao excluir o cadastro.');
+        }
+    } catch (err) {
+        console.error(err);
+        alert('Ocorreu um erro ao processar a exclusão.');
+    }
+}
+
+function confirmDeleteUserFromModal() {
+    const userId = document.getElementById('edit-user-id').value;
+    const userName = document.getElementById('edit-name').value || 'este cadastro';
+    if (userId) {
+        confirmDeleteUser(userId, userName);
+    } else {
+        alert('ID de usuário inválido.');
+    }
+}
+
+
+
+// Filter Dojos View
+function filterDojos() {
+    const q = document.getElementById('search-dojo').value.toLowerCase();
+    const city = document.getElementById('city-filter').value;
+    document.querySelectorAll('.dojo-card-item').forEach(card => {
+        const name = card.getAttribute('data-name');
+        const addr = card.getAttribute('data-address');
+        const cardCity = card.getAttribute('data-city');
+        
+        const matchQ = !q || name.includes(q) || addr.includes(q);
+        const matchCity = city === 'all' || cardCity === city;
+
+        card.style.display = (matchQ && matchCity) ? '' : 'none';
+    });
+}
+
+// Filter Senseis View
+function filterSenseis() {
+    const q = document.getElementById('search-sensei').value.toLowerCase();
+    const dojo = document.getElementById('sensei-dojo-filter').value;
+    const belt = document.getElementById('sensei-belt-filter').value;
+
+    document.querySelectorAll('.sensei-card-item').forEach(card => {
+        const name = card.getAttribute('data-name');
+        const email = card.getAttribute('data-email');
+        const cardDojo = card.getAttribute('data-dojo');
+        const cardBelt = card.getAttribute('data-belt');
+
+        const matchQ = !q || name.includes(q) || email.includes(q);
+        const matchDojo = dojo === 'all' || cardDojo === dojo;
+        const matchBelt = belt === 'all' || cardBelt.includes(belt);
+
+        card.style.display = (matchQ && matchDojo && matchBelt) ? '' : 'none';
+    });
+}
+
+// Filter Students View
+function filterStudents() {
+    const q = document.getElementById('search-student').value.toLowerCase();
+    const dojo = document.getElementById('student-dojo-filter').value;
+    const sensei = document.getElementById('student-sensei-filter').value;
+    const status = document.getElementById('student-status-filter').value;
+
+    document.querySelectorAll('.student-card-item').forEach(card => {
+        const name = card.getAttribute('data-name');
+        const email = card.getAttribute('data-email');
+        const cpf = card.getAttribute('data-cpf');
+        const cardDojo = card.getAttribute('data-dojo');
+        const cardSensei = card.getAttribute('data-sensei');
+        const cardStatus = card.getAttribute('data-status');
+
+        const matchQ = !q || name.includes(q) || email.includes(q) || cpf.includes(q);
+        const matchDojo = dojo === 'all' || cardDojo === dojo;
+        const matchSensei = sensei === 'all' || cardSensei === sensei;
+        const matchStatus = status === 'all' || cardStatus === status;
+
+        card.style.display = (matchQ && matchDojo && matchSensei && matchStatus) ? '' : 'none';
+    });
+}
+
+// Open Edit Student Modal
+function openEditStudentModal(student) {
+    const modal = document.getElementById('modal-edit-user');
+    const form = document.getElementById('edit-user-form');
+    if (!modal || !form) return;
+
+    form.action = `/api/users/${student.id}/update`;
+    document.getElementById('edit-user-id').value = student.id;
+    document.getElementById('edit-name').value = student.name || '';
+    document.getElementById('edit-email').value = student.email || '';
+    document.getElementById('edit-role').value = student.role || 'STUDENT';
+    
+    const beltSelect = document.getElementById('edit-belt-rank');
+    if (beltSelect) {
+        let found = false;
+        for (let opt of beltSelect.options) {
+            if (opt.value === student.belt_rank || opt.value.startsWith(student.belt_rank)) {
+                beltSelect.value = opt.value;
+                found = true;
+                break;
+            }
+        }
+        if (!found) beltSelect.value = student.belt_rank || 'Mukyu (Iniciante)';
+    }
+
+    if (document.getElementById('edit-birth-date')) document.getElementById('edit-birth-date').value = student.birth_date || '';
+    document.getElementById('edit-start-date').value = student.start_date || '';
+    document.getElementById('edit-last-exam-date').value = student.last_exam_date || '';
+    
+    if (student.dojo_id) {
+        const editDojoSelect = document.getElementById('edit-dojo-id');
+        if (editDojoSelect) {
+            editDojoSelect.value = student.dojo_id;
+            updateDojoSensei(editDojoSelect, 'edit-supervisor-sensei-display', 'edit-supervisor-sensei-hidden');
+        }
+    } else {
+        const editDojoSelect = document.getElementById('edit-dojo-id');
+        if (editDojoSelect) {
+            updateDojoSensei(editDojoSelect, 'edit-supervisor-sensei-display', 'edit-supervisor-sensei-hidden');
+        }
+    }
+    document.getElementById('edit-total-attendances').value = student.total_attendances || 0;
+    document.getElementById('edit-cpf').value = student.cpf_masked || '';
+    document.getElementById('edit-is-active').value = student.is_active ? 'true' : 'false';
+    document.getElementById('edit-ready-for-exam').value = student.ready_for_exam ? 'true' : 'false';
+    document.getElementById('edit-photo-url').value = student.photo_url || '';
+
+    if (document.getElementById('edit-blood-type')) {
+        document.getElementById('edit-blood-type').value = student.blood_type || 'Não Informado';
+    }
+    if (document.getElementById('edit-emergency-contact-name')) {
+        document.getElementById('edit-emergency-contact-name').value = student.emergency_contact_name || '';
+    }
+    if (document.getElementById('edit-emergency-contact-phone')) {
+        document.getElementById('edit-emergency-contact-phone').value = student.emergency_contact_phone || '';
+    }
+    if (document.getElementById('edit-health-insurance')) {
+        document.getElementById('edit-health-insurance').value = student.health_insurance || '';
+    }
+    if (document.getElementById('edit-medical-notes')) {
+        document.getElementById('edit-medical-notes').value = student.medical_notes || '';
+    }
+    if (document.getElementById('edit-blood-transfusion-approved')) {
+        document.getElementById('edit-blood-transfusion-approved').checked = student.blood_transfusion_approved !== false;
+    }
+    if (document.getElementById('edit-lgpd-consent')) {
+        document.getElementById('edit-lgpd-consent').checked = student.lgpd_consent !== false;
+    }
+
+    modal.classList.add('active');
+}
+
+function updateDojoSensei(dojoSelect, targetDisplayInputId, hiddenInputId) {
+    if (!dojoSelect) return;
+    const selectedOpt = dojoSelect.options[dojoSelect.selectedIndex];
+    if (!selectedOpt) return;
+    const senseiId = selectedOpt.getAttribute('data-responsible-sensei-id') || '';
+    const senseiName = selectedOpt.getAttribute('data-responsible-sensei-name') || 'Sem Sensei Responsável';
+    
+    const displayInput = document.getElementById(targetDisplayInputId);
+    const hiddenInput = document.getElementById(hiddenInputId);
+    
+    if (displayInput) {
+        displayInput.value = senseiId ? senseiName : 'Sem Sensei Responsável';
+    }
+    if (hiddenInput) {
+        hiddenInput.value = senseiId;
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const newDojoSelect = document.getElementById('new-dojo-id');
+    if (newDojoSelect) {
+        updateDojoSensei(newDojoSelect, 'new-supervisor-sensei-display', 'new-supervisor-sensei-hidden');
+    }
+});
+
+window.CURRENT_STUDENT_ATTENDANCES = [];
+
+async function openStudentAttendancesModal(userId, userName) {
+    const modal = document.getElementById('modal-student-attendances');
+    const tbody = document.getElementById('att-modal-tbody');
+    if (!modal || !tbody) return;
+
+    // Reset Filters
+    const dateInput = document.getElementById('att-filter-date');
+    const dojoSelect = document.getElementById('att-filter-dojo');
+    const senseiSelect = document.getElementById('att-filter-sensei');
+    if (dateInput) dateInput.value = '';
+    if (dojoSelect) dojoSelect.innerHTML = '<option value="all">Todos os Dojos</option>';
+    if (senseiSelect) senseiSelect.innerHTML = '<option value="all">Todos os Senseis</option>';
+
+    tbody.innerHTML = `
+        <tr>
+            <td colspan="4" style="text-align: center; padding: 2.5rem; color: var(--text-muted);">
+                <i class="fa-solid fa-spinner fa-spin" style="font-size: 1.8rem; color: var(--accent-cyan);"></i>
+                <div style="margin-top: 0.6rem; font-weight: 600;">Carregando histórico de presenças de ${userName}...</div>
+            </td>
+        </tr>
+    `;
+    modal.classList.add('active');
+
+    try {
+        const response = await fetch(`/api/users/${userId}/attendances`);
+        if (!response.ok) throw new Error('Falha ao carregar histórico de presenças.');
+        const data = await response.json();
+
+        document.getElementById('att-modal-user-name').textContent = data.user_name || userName;
+        document.getElementById('att-modal-user-photo').src = data.user_photo || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200';
+        document.getElementById('att-modal-user-rank').textContent = data.belt_rank || 'Iniciante';
+        document.getElementById('att-modal-user-dojo').textContent = `Dojo: ${data.user_dojo} • Sensei Responsável: ${data.user_sensei}`;
+        
+        window.CURRENT_STUDENT_ATTENDANCES = data.attendances || [];
+
+        // Build unique options for Dojo and Sensei dropdown filters
+        const dojos = new Set();
+        const senseis = new Set();
+        window.CURRENT_STUDENT_ATTENDANCES.forEach(a => {
+            if (a.dojo_name) dojos.add(a.dojo_name);
+            if (a.instructor_name) senseis.add(a.instructor_name);
+        });
+
+        if (dojoSelect) {
+            dojoSelect.innerHTML = '<option value="all">Todos os Dojos</option>' + 
+                Array.from(dojos).map(d => `<option value="${d}">${d}</option>`).join('');
+        }
+        if (senseiSelect) {
+            senseiSelect.innerHTML = '<option value="all">Todos os Senseis</option>' + 
+                Array.from(senseis).map(s => `<option value="${s}">${s}</option>`).join('');
+        }
+
+        applyStudentAttendancesFilter();
+
+    } catch (err) {
+        console.error(err);
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="4" style="text-align: center; padding: 2rem; color: var(--accent-rose);">
+                    <i class="fa-solid fa-triangle-exclamation" style="font-size: 1.5rem;"></i>
+                    <div style="margin-top: 0.4rem;">Erro ao carregar o histórico de presenças.</div>
+                </td>
+            </tr>
+        `;
+    }
+}
+
+function applyStudentAttendancesFilter() {
+    const tbody = document.getElementById('att-modal-tbody');
+    const totalCountElem = document.getElementById('att-modal-total-count');
+    if (!tbody) return;
+
+    const dateQ = (document.getElementById('att-filter-date')?.value || '').trim().toLowerCase();
+    const dojoQ = document.getElementById('att-filter-dojo')?.value || 'all';
+    const senseiQ = document.getElementById('att-filter-sensei')?.value || 'all';
+
+    const list = window.CURRENT_STUDENT_ATTENDANCES || [];
+    const filtered = list.filter(a => {
+        const matchDate = !dateQ || (a.date && a.date.toLowerCase().includes(dateQ)) || (a.date_raw && a.date_raw.includes(dateQ));
+        const matchDojo = dojoQ === 'all' || a.dojo_name === dojoQ;
+        const matchSensei = senseiQ === 'all' || a.instructor_name === senseiQ;
+        return matchDate && matchDojo && matchSensei;
+    });
+
+    if (totalCountElem) {
+        totalCountElem.textContent = `${filtered.length} Presenças`;
+    }
+
+    if (filtered.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="4" style="text-align: center; padding: 2rem; color: var(--text-dim);">
+                    Nenhuma aula encontrada para os filtros selecionados.
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    tbody.innerHTML = filtered.map(a => `
+        <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05); transition: background 0.15s ease;" onmouseover="this.style.background='rgba(255,255,255,0.03)'" onmouseout="this.style.background='transparent'">
+            <td style="padding: 0.65rem 0.75rem; white-space: nowrap;">
+                <strong style="color: white;"><i class="fa-solid fa-calendar-day" style="color: var(--accent-cyan); margin-right: 0.35rem;"></i> ${a.date}</strong>
+            </td>
+            <td style="padding: 0.65rem 0.75rem;">
+                <span style="color: #e2e8f0; font-weight: 600;"><i class="fa-solid fa-torii-gate" style="color: var(--accent-cyan); margin-right: 0.25rem; font-size: 0.75rem;"></i> ${a.dojo_name}</span>
+            </td>
+            <td style="padding: 0.65rem 0.75rem;">
+                <div style="color: white; font-weight: 500;">${a.schedule_title}</div>
+                <small style="color: var(--text-dim);">${a.time}</small>
+            </td>
+            <td style="padding: 0.65rem 0.75rem; color: var(--text-muted);">
+                <i class="fa-solid fa-user-tie" style="color: var(--accent-amber); margin-right: 0.25rem; font-size: 0.75rem;"></i> ${a.instructor_name}
+            </td>
+        </tr>
+    `).join('');
+}
+
+function closeStudentAttendancesModal() {
+    const modal = document.getElementById('modal-student-attendances');
+    if (modal) modal.classList.remove('active');
+}
+</script>
+{% endblock %}

@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}🥋 DOJOCHO - RioAiki Gestão de Dojos{% endblock %}</title>
+    <!-- Fonts & Style -->
+    <link rel="stylesheet" href="/static/css/style.css">
+    <!-- FontAwesome icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+    <!-- NAVBAR -->
+    <nav class="navbar">
+        <div class="navbar-container">
+            <a href="/" class="logo-group">
+                <div class="logo-icon">合</div>
+                <div>
+                    <div class="logo-text">RioAiki DOJOCHO</div>
+                    <div class="logo-sub">Gestão de Dojos</div>
+                </div>
+            </a>
+
+            <ul class="nav-links">
+                <li>
+                    <a href="/" class="nav-link {% if active_page == 'dashboard' %}active{% endif %}">
+                        <i class="fa-solid fa-chart-pie"></i>
+                        <span>Geral</span>
+                        {% if pending_guests_count or pending_classifieds_count %}
+                            <span class="nav-badge">{{ pending_guests_count + pending_classifieds_count }}</span>
+                        {% endif %}
+                    </a>
+                </li>
+                {% if current_user and current_user.role in ['ADMIN', 'SENSEI'] %}
+                <li>
+                    <a href="/management" class="nav-link {% if active_page == 'management' %}active{% endif %}">
+                        <i class="fa-solid fa-users-gear"></i>
+                        <span>Dojos & Alunos</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/schedule" class="nav-link {% if active_page == 'schedule' %}active{% endif %}">
+                        <i class="fa-solid fa-calendar-days"></i>
+                        <span>Grade & Aulas</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/financial" class="nav-link {% if active_page == 'financial' %}active{% endif %}">
+                        <i class="fa-solid fa-wallet"></i>
+                        <span>Financeiro</span>
+                    </a>
+                </li>
+                {% elif current_user and current_user.role == 'STUDENT' %}
+                <li>
+                    <a href="/financial/my-tuition" class="nav-link {% if active_page == 'financial' %}active{% endif %}">
+                        <i class="fa-solid fa-wallet"></i>
+                        <span>Minha Mensalidade</span>
+                    </a>
+                </li>
+                {% endif %}
+                <li>
+                    <a href="/classifieds" class="nav-link {% if active_page == 'classifieds' %}active{% endif %}">
+                        <i class="fa-solid fa-store"></i>
+                        <span>Classificados</span>
+                        {% if pending_classifieds_count %}
+                            <span class="nav-badge" style="background: var(--accent-rose); color: white;">{{ pending_classifieds_count }}</span>
+                        {% endif %}
+                    </a>
+                </li>
+                <li>
+                    <a href="/events" class="nav-link {% if active_page == 'events' %}active{% endif %}">
+                        <i class="fa-solid fa-bullhorn"></i>
+                        <span>Eventos</span>
+                    </a>
+                </li>
+                <li>
+                    <button id="theme-toggle" class="theme-toggle-btn" title="Alternar Tema Claro/Escuro" aria-label="Alternar Tema">
+                        <i class="fa-solid fa-moon" id="theme-icon"></i>
+                    </button>
+                </li>
+                {% if current_user %}
+                <li style="display: flex; align-items: center; gap: 0.6rem; margin-left: 0.8rem; padding-left: 0.8rem; border-left: 1px solid var(--border-color);">
+                    <img src="{{ current_user.photo_url or 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100' }}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 1px solid var(--accent-cyan);">
+                    <div style="font-size: 0.8rem; line-height: 1.2;">
+                        <div style="font-weight: 700; color: white;">{{ current_user.name }}</div>
+                        <div style="font-size: 0.7rem; color: var(--accent-cyan);">{{ current_user.role }} ({{ current_user.belt_rank }})</div>
+                    </div>
+                    <a href="/logout" class="btn btn-secondary btn-sm" style="padding: 0.25rem 0.6rem; font-size: 0.75rem; color: var(--accent-rose); border-color: rgba(244, 63, 94, 0.3);" title="Sair da Conta">
+                        <i class="fa-solid fa-right-from-bracket"></i> Sair
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </div>
+    </nav>
+
+    <!-- MAIN BODY -->
+    <main class="main-container">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+        <div>&copy; 2026 RioAiki DOJOCHO - Sistema de Gerenciamento de Dojos de Aikido. Conformidade LGPD Garantida.</div>
+    </footer>
+
+    <!-- APP SCRIPT -->
+    <script src="/static/js/app.js"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

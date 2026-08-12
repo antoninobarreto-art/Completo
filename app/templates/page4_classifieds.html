@@ -1,0 +1,427 @@
+{% extends "base.html" %}
+
+{% block title %}🥋 DOJOCHO - Mural de Classificados{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title"><i class="fa-solid fa-store" style="color: var(--primary);"></i> Mural de Classificados RioAiki</h1>
+        <p class="page-subtitle">Compra, venda e troca de equipamentos de Aikido (Dogis, Bokken, Hakamas e Livros) com mediação dos Senseis.</p>
+    </div>
+    <div style="display: flex; gap: 0.5rem;">
+        <button class="btn btn-primary" data-modal="modal-new-classified">
+            <i class="fa-solid fa-plus"></i> Publicar Anúncio
+        </button>
+    </div>
+</div>
+
+<!-- FILTER BAR -->
+<div class="filter-bar">
+    <div class="filter-group">
+        <span class="filter-label"><i class="fa-solid fa-magnifying-glass"></i> Pesquisar:</span>
+        <input type="text" id="search-filter" class="form-input" placeholder="Buscar por kimono, bokken, hakama...">
+    </div>
+    <div class="filter-group">
+        <span class="filter-label">Categoria:</span>
+        <select id="category-filter" class="form-select">
+            <option value="all">Todas as Categorias</option>
+            <option value="Dogi/Kimono">Dogi / Kimono</option>
+            <option value="Armas (Bokken/Jo/Tanto)">Armas (Bokken/Jo/Tanto)</option>
+            <option value="Acessórios">Acessórios / Hakama</option>
+            <option value="Livros/Mídia">Livros & Mídia</option>
+            <option value="Outros">Outros</option>
+        </select>
+    </div>
+    <!-- DROPDOWN QUANTIDADE DE COLUNAS (1, 2, 3, 4, 5) -->
+    <div class="filter-group" style="max-width: 200px;">
+        <span class="filter-label"><i class="fa-solid fa-table-columns"></i> Colunas:</span>
+        <select class="form-select" onchange="changeGridColumns('grid-classifieds', this)">
+            <option value="1">1 Coluna</option>
+            <option value="2">2 Colunas</option>
+            <option value="3" selected>3 Colunas</option>
+            <option value="4">4 Colunas</option>
+            <option value="5">5 Colunas</option>
+        </select>
+    </div>
+</div>
+
+<!-- SEÇÃO: MEUS ANÚNCIOS (Acompanhamento de Status e Motivo de Reprovação) -->
+{% if my_classifieds %}
+<div style="margin-bottom: 2rem; background: var(--bg-card); border: 1px solid var(--border-color); padding: 1.25rem; border-radius: var(--radius-md);">
+    <h3 style="color: white; font-size: 1.1rem; margin-bottom: 0.8rem; display: flex; align-items: center; gap: 0.5rem;">
+        <i class="fa-solid fa-box-archive" style="color: var(--accent-cyan);"></i> Meus Anúncios ({{ my_classifieds|length }})
+    </h3>
+    <div class="grid-3" style="grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem;">
+        {% for item in my_classifieds %}
+        <div class="card" style="padding: 1rem; border-left: 4px solid {% if item.status == 'APPROVED' %}var(--accent-emerald){% elif item.status == 'REJECTED' %}var(--accent-rose){% else %}var(--accent-amber){% endif %};">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
+                <strong style="color: white; font-size: 0.95rem;">{{ item.title }}</strong>
+                {% if item.status == 'APPROVED' %}
+                    <span class="badge badge-emerald"><i class="fa-solid fa-circle-check"></i> Publicado</span>
+                {% elif item.status == 'REJECTED' %}
+                    <span class="badge badge-rose"><i class="fa-solid fa-circle-xmark"></i> Reprovado</span>
+                {% else %}
+                    <span class="badge badge-amber"><i class="fa-solid fa-clock"></i> Aguardando Sensei</span>
+                {% endif %}
+            </div>
+
+            <div style="display: flex; gap: 0.8rem; margin-bottom: 0.6rem;">
+                <img src="{{ item.photo_url or 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=400' }}" style="width: 60px; height: 60px; object-fit: cover; border-radius: var(--radius-sm);">
+                <div>
+                    <span class="badge badge-cyan" style="font-size: 0.75rem;">R$ {{ "%.2f"|format(item.price) }}</span>
+                    <p style="font-size: 0.8rem; color: var(--text-dim); margin-top: 0.3rem;">{{ item.description|truncate(70) }}</p>
+                </div>
+            </div>
+
+            {% if item.status == 'REJECTED' and item.rejection_reason %}
+            <div style="background: rgba(244, 63, 94, 0.12); border: 1px solid var(--accent-rose); color: #fda4af; padding: 0.6rem 0.8rem; border-radius: var(--radius-sm); font-size: 0.8rem; margin-bottom: 0.8rem;">
+                <strong><i class="fa-solid fa-triangle-exclamation"></i> Justificativa do Sensei:</strong>
+                <div style="margin-top: 0.2rem; color: white;">{{ item.rejection_reason }}</div>
+            </div>
+            {% endif %}
+
+            <div style="display: flex; gap: 0.4rem;">
+                <button class="btn btn-secondary btn-sm" style="flex: 1;" onclick="openEditClassifiedModal({
+                    id: {{ item.id }},
+                    title: '{{ item.title|replace("'", "\\'") }}',
+                    category: '{{ item.category|replace("'", "\\'") }}',
+                    price: {{ item.price or 0.0 }},
+                    description: '{{ item.description|replace("'", "\\'") }}',
+                    photo_url: '{{ item.photo_url or '' }}'
+                })">
+                    <i class="fa-solid fa-pen-to-square"></i> Editar Anúncio
+                </button>
+                <form action="/api/classifieds/{{ item.id }}/delete" method="POST" onsubmit="return confirm('Tem certeza que deseja excluir este anúncio?')">
+                    <button type="submit" class="btn btn-rose btn-sm"><i class="fa-solid fa-trash"></i></button>
+                </form>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+{% if current_user and current_user.role in ['ADMIN', 'SENSEI'] and pending_classifieds %}
+<!-- ANÚNCIOS PENDENTES DE APROVAÇÃO DO SENSEI -->
+<div style="margin-bottom: 2rem; background: rgba(245, 158, 11, 0.08); border: 1px solid var(--accent-amber); padding: 1.25rem; border-radius: var(--radius-md);">
+    <h3 style="color: var(--accent-amber); font-size: 1.15rem; margin-bottom: 0.8rem;">
+        <i class="fa-solid fa-shield-halved"></i> Anúncios de Alunos Aguardando sua Aprovação ({{ pending_classifieds|length }})
+    </h3>
+    <div class="grid-3" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));">
+        {% for item in pending_classifieds %}
+        <div class="card" style="padding: 1rem; border-color: rgba(245, 158, 11, 0.4);">
+            <div style="display: flex; gap: 0.8rem; margin-bottom: 0.8rem;">
+                <img src="{{ item.photo_url or 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=400' }}" style="width: 70px; height: 70px; object-fit: cover; border-radius: var(--radius-sm);">
+                <div>
+                    <strong style="color: white; font-size: 0.95rem; display: block;">{{ item.title }}</strong>
+                    <span class="badge badge-amber" style="font-size: 0.75rem;">R$ {{ "%.2f"|format(item.price) }}</span>
+                    <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.2rem;">Autor: <strong>{{ item.author.name }}</strong></div>
+                </div>
+            </div>
+            <p style="font-size: 0.8rem; color: var(--text-dim); margin-bottom: 0.8rem;">{{ item.description }}</p>
+            <div style="display: flex; gap: 0.5rem;">
+                <button class="btn btn-emerald btn-sm" style="flex: 1;" onclick="approveClassifiedStatus({{ item.id }})">
+                    <i class="fa-solid fa-check"></i> Aprovar
+                </button>
+                <button class="btn btn-rose btn-sm" style="flex: 1;" onclick="openRejectClassifiedModal({{ item.id }}, '{{ item.title|replace("'", "\\'") }}')">
+                    <i class="fa-solid fa-xmark"></i> Reprovar
+                </button>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- ANÚNCIOS APROVADOS (MURAL PÚBLICO) -->
+<h2 style="font-size: 1.3rem; margin-bottom: 1.2rem;"><i class="fa-solid fa-tags" style="color: var(--accent-emerald);"></i> Anúncios Ativos</h2>
+
+<div class="grid-3 grid-dynamic" id="grid-classifieds">
+    {% for item in classifieds %}
+    <div class="card filterable-item" data-category="{{ item.category }}">
+        <div style="position: relative; margin-bottom: 1rem;">
+            <img src="{{ item.photo_url or 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=400' }}" style="width: 100%; height: 180px; object-fit: cover; border-radius: var(--radius-sm);">
+            <span class="badge badge-emerald" style="position: absolute; top: 10px; right: 10px; font-size: 0.85rem; padding: 0.3rem 0.7rem; font-weight: 800;">
+                R$ {{ "%.2f"|format(item.price) }}
+            </span>
+        </div>
+
+        <span class="badge badge-primary" style="margin-bottom: 0.4rem;">{{ item.category }}</span>
+        <h3 style="font-size: 1.15rem; color: white; margin: 0.3rem 0;">{{ item.title }}</h3>
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.2rem; min-height: 40px;">
+            {{ item.description }}
+        </p>
+
+        <div style="display: flex; flex-direction: column; gap: 0.6rem; background: var(--bg-surface); padding: 0.75rem; border-radius: var(--radius-sm); border-top: 1px solid var(--border-color);">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+                <div style="display: flex; align-items: center; gap: 0.6rem;">
+                    <img src="{{ item.author.photo_url or 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100' }}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;">
+                    <div>
+                        <strong style="font-size: 0.85rem; color: white;">{{ item.author.name }}</strong>
+                        <div style="font-size: 0.75rem; color: var(--text-dim);">{{ item.author.dojo.name if item.author.dojo else '' }}</div>
+                    </div>
+                </div>
+                <a href="tel:{{ item.author.phone }}" class="btn btn-emerald btn-sm">
+                    <i class="fa-brands fa-whatsapp"></i> Contato
+                </a>
+            </div>
+
+            {% if current_user and (current_user.role in ['ADMIN', 'SENSEI'] or current_user.sub|int == item.author_id) %}
+            <div style="display: flex; gap: 0.4rem; justify-content: flex-end; margin-top: 0.2rem;">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="openEditClassifiedModal({
+                    id: {{ item.id }},
+                    title: '{{ item.title|replace("'", "\\'") }}',
+                    category: '{{ item.category|replace("'", "\\'") }}',
+                    price: {{ item.price or 0.0 }},
+                    description: '{{ item.description|replace("'", "\\'") }}',
+                    photo_url: '{{ item.photo_url or '' }}'
+                })">
+                    <i class="fa-solid fa-pen-to-square"></i> Editar Anúncio
+                </button>
+                <form action="/api/classifieds/{{ item.id }}/delete" method="POST" onsubmit="return confirm('Excluir este anúncio?')" style="display: inline;">
+                    <button type="submit" class="btn btn-rose btn-sm"><i class="fa-solid fa-trash"></i></button>
+                </form>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% else %}
+    <div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 3rem; background: var(--bg-card); border-radius: var(--radius-md);">
+        Nenhum anúncio publicado no momento.
+    </div>
+    {% endfor %}
+</div>
+
+<!-- MODAL NOVO ANÚNCIO -->
+<div class="modal-backdrop" id="modal-new-classified">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 style="color: white;"><i class="fa-solid fa-plus"></i> Publicar Novo Anúncio</h3>
+            <button class="modal-close">&times;</button>
+        </div>
+        <form action="/api/classifieds/create" method="POST" enctype="multipart/form-data">
+            <div class="form-group">
+                <label class="form-label">Título do Anúncio</label>
+                <input type="text" name="title" class="form-input" required placeholder="Ex: Dogi Trançado Meiji A2">
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                    <label class="form-label">Categoria</label>
+                    <select name="category" class="form-select">
+                        <option value="Dogi/Kimono">Dogi / Kimono</option>
+                        <option value="Armas (Bokken/Jo/Tanto)">Armas (Bokken/Jo/Tanto)</option>
+                        <option value="Acessórios">Acessórios / Hakama</option>
+                        <option value="Livros/Mídia">Livros & Mídia</option>
+                        <option value="Outros">Outros</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Preço (R$)</label>
+                    <input type="number" step="0.01" name="price" class="form-input" required placeholder="150.00">
+                </div>
+            </div>
+            <div class="form-group" style="background: var(--bg-surface); padding: 1.1rem; border-radius: var(--radius-md); border: 1px solid var(--border-highlight);">
+                <label class="form-label" style="color: var(--accent-cyan); font-weight: 700;">
+                    <i class="fa-solid fa-camera"></i> Método para Inserir a Foto do Produto:
+                </label>
+
+                <select class="form-select photo-method-select" style="margin-bottom: 0.8rem; font-weight: 600;" onchange="switchPhotoMethod(this)">
+                    <option value="file">📁 Upload do Disco Local (Arquivo)</option>
+                    <option value="url">🔗 URL da Imagem na Web</option>
+                    <option value="paste">📋 Copiar & Colar (Cut & Paste / Ctrl+V)</option>
+                    <option value="webcam">📷 Tirar Foto com a Câmera / Webcam</option>
+                </select>
+
+                <div class="photo-method-panel panel-file" style="display: block;">
+                    <input type="file" name="photo_file" accept="image/png, image/jpeg, image/webp" class="form-file-input" onchange="validateFileSize(this, 5)">
+                </div>
+
+                <div class="photo-method-panel panel-url" style="display: none;">
+                    <input type="text" name="photo_url" class="form-input" placeholder="https://exemplo.com/fotos/produto.jpg">
+                </div>
+
+                <div class="photo-method-panel panel-paste" style="display: none;">
+                    <div class="paste-dropzone" tabIndex="0" onpaste="handleImagePaste(event, this)" onclick="this.focus()">
+                        <i class="fa-solid fa-paste" style="font-size: 1.6rem; color: var(--accent-cyan); margin-bottom: 0.3rem;"></i>
+                        <div style="font-weight: 600;">Clique aqui e pressione <kbd style="background: rgba(255,255,255,0.15); padding: 2px 6px; border-radius: 4px;">Ctrl + V</kbd></div>
+                        <input type="hidden" name="photo_base64" class="paste-base64-input">
+                        <div class="paste-preview" style="display: none;"></div>
+                    </div>
+                </div>
+
+                <div class="photo-method-panel panel-webcam" style="display: none;">
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="startWebcam(this)">
+                        <i class="fa-solid fa-video"></i> Ativar Câmera do Dispositivo
+                    </button>
+                    <div class="webcam-container" style="display: none; margin-top: 0.6rem;">
+                        <video class="webcam-video" style="width: 100%; max-height: 180px; border-radius: var(--radius-sm); border: 1px solid var(--border-highlight);" autoplay playsinline></video>
+                        <button type="button" class="btn btn-emerald btn-sm" style="margin-top: 0.4rem; width: 100%;" onclick="captureWebcam(this)">
+                            <i class="fa-solid fa-camera"></i> Capturar Foto Agora
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Descrição Detalhada do Estado e Tamanho</label>
+                <textarea name="description" class="form-input" rows="3" required placeholder="Descreva as condições, tempo de uso e tamanho exato..."></textarea>
+            </div>
+            <p style="font-size: 0.8rem; color: var(--accent-amber); margin-bottom: 1rem;">
+                <i class="fa-solid fa-shield"></i> Nota: Anúncios de alunos necessitam da aprovação prévia do seu Sensei responsável para serem publicados.
+            </p>
+            <button type="submit" class="btn btn-primary" style="width: 100%;">Enviar para Aprovação do Sensei</button>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL EDITAR ANÚNCIO -->
+<div class="modal-backdrop" id="modal-edit-classified">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 style="color: white;"><i class="fa-solid fa-pen-to-square"></i> Editar Anúncio</h3>
+            <button class="modal-close">&times;</button>
+        </div>
+        <form id="edit-classified-form" action="" method="POST" enctype="multipart/form-data">
+            <div class="form-group">
+                <label class="form-label">Título do Anúncio</label>
+                <input type="text" id="edit-classified-title" name="title" class="form-input" required>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                    <label class="form-label">Categoria</label>
+                    <select id="edit-classified-category" name="category" class="form-select">
+                        <option value="Dogi/Kimono">Dogi / Kimono</option>
+                        <option value="Armas (Bokken/Jo/Tanto)">Armas (Bokken/Jo/Tanto)</option>
+                        <option value="Acessórios">Acessórios / Hakama</option>
+                        <option value="Livros/Mídia">Livros & Mídia</option>
+                        <option value="Outros">Outros</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Preço (R$)</label>
+                    <input type="number" step="0.01" id="edit-classified-price" name="price" class="form-input" required>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Descrição Detalhada</label>
+                <textarea id="edit-classified-description" name="description" class="form-input" rows="3" required></textarea>
+            </div>
+            <div class="form-group" style="background: var(--bg-surface); padding: 1.1rem; border-radius: var(--radius-md); border: 1px solid var(--border-highlight);">
+                <label class="form-label" style="color: var(--accent-cyan); font-weight: 700;">
+                    <i class="fa-solid fa-camera"></i> Alterar Foto do Produto (Opcional):
+                </label>
+                <select class="form-select photo-method-select" style="margin-bottom: 0.8rem; font-weight: 600;" onchange="switchPhotoMethod(this)">
+                    <option value="file">📁 Upload do Disco Local (Arquivo)</option>
+                    <option value="url">🔗 URL da Imagem na Web</option>
+                    <option value="paste">📋 Copiar & Colar (Cut & Paste / Ctrl+V)</option>
+                    <option value="webcam">📷 Tirar Foto com a Câmera / Webcam</option>
+                </select>
+                <div class="photo-method-panel panel-file" style="display: block;">
+                    <input type="file" name="photo_file" accept="image/png, image/jpeg, image/webp" class="form-file-input" onchange="validateFileSize(this, 5)">
+                </div>
+                <div class="photo-method-panel panel-url" style="display: none;">
+                    <input type="text" id="edit-classified-photo-url" name="photo_url" class="form-input">
+                </div>
+                <div class="photo-method-panel panel-paste" style="display: none;">
+                    <div class="paste-dropzone" tabIndex="0" onpaste="handleImagePaste(event, this)" onclick="this.focus()">
+                        <i class="fa-solid fa-paste" style="font-size: 1.6rem; color: var(--accent-cyan);"></i>
+                        <input type="hidden" name="photo_base64" class="paste-base64-input">
+                        <div class="paste-preview" style="display: none;"></div>
+                    </div>
+                </div>
+                <div class="photo-method-panel panel-webcam" style="display: none;">
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="startWebcam(this)">
+                        <i class="fa-solid fa-video"></i> Ativar Câmera
+                    </button>
+                    <div class="webcam-container" style="display: none; margin-top: 0.6rem;">
+                        <video class="webcam-video" style="width: 100%; max-height: 180px;" autoplay playsinline></video>
+                        <button type="button" class="btn btn-emerald btn-sm" style="margin-top: 0.4rem; width: 100%;" onclick="captureWebcam(this)">
+                            Capturar Foto
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width: 100%;">Salvar e Reenviar para Aprovação</button>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL REPROVAR ANÚNCIO COM JUSTIFICATIVA (SENSEI/ADMIN) -->
+<div class="modal-backdrop" id="modal-reject-classified">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 style="color: var(--accent-rose);"><i class="fa-solid fa-circle-xmark"></i> Reprovar Anúncio</h3>
+            <button class="modal-close">&times;</button>
+        </div>
+        <form id="reject-classified-form" onsubmit="submitRejectClassified(event)">
+            <input type="hidden" id="reject-classified-id">
+            <p style="font-size: 0.9rem; color: var(--text-dim); margin-bottom: 1rem;">
+                Anúncio: <strong id="reject-classified-title-display" style="color: white;"></strong>
+            </p>
+            <div class="form-group">
+                <label class="form-label" style="color: var(--accent-rose); font-weight: 700;">
+                    <i class="fa-solid fa-pen-nib"></i> Motivo / Justificativa da Reprovação (Obrigatório):
+                </label>
+                <textarea id="reject-reason-input" class="form-input" rows="3" required placeholder="Explique ao aluno o motivo da recusa para que ele possa corrigir o anúncio..."></textarea>
+            </div>
+            <button type="submit" class="btn btn-rose" style="width: 100%;">Confirmar Reprovação com Justificativa</button>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function approveClassifiedStatus(id) {
+    approveClassified(id, 'APPROVED');
+}
+
+function openRejectClassifiedModal(id, title) {
+    document.getElementById('reject-classified-id').value = id;
+    document.getElementById('reject-classified-title-display').innerText = title;
+    document.getElementById('reject-reason-input').value = '';
+    const modal = document.getElementById('modal-reject-classified');
+    if (modal) modal.classList.add('active');
+}
+
+async function submitRejectClassified(e) {
+    e.preventDefault();
+    const id = document.getElementById('reject-classified-id').value;
+    const reason = document.getElementById('reject-reason-input').value;
+    
+    try {
+        const formData = new FormData();
+        formData.append('status', 'REJECTED');
+        formData.append('rejection_reason', reason);
+        
+        const response = await fetch(`/api/classifieds/${id}/status`, {
+            method: 'POST',
+            body: formData
+        });
+        if (response.ok) {
+            window.location.reload();
+        } else {
+            alert('Erro ao reprovar anúncio.');
+        }
+    } catch (err) {
+        console.error(err);
+        alert('Erro na requisição.');
+    }
+}
+
+function openEditClassifiedModal(item) {
+    const modal = document.getElementById('modal-edit-classified');
+    const form = document.getElementById('edit-classified-form');
+    if (!modal || !form) return;
+
+    form.action = `/api/classifieds/${item.id}/update`;
+    document.getElementById('edit-classified-title').value = item.title || '';
+    document.getElementById('edit-classified-category').value = item.category || 'Dogi/Kimono';
+    document.getElementById('edit-classified-price').value = item.price || 0.0;
+    document.getElementById('edit-classified-description').value = item.description || '';
+    document.getElementById('edit-classified-photo-url').value = item.photo_url || '';
+
+    modal.classList.add('active');
+}
+</script>
+{% endblock %}

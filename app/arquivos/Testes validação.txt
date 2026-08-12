@@ -1,0 +1,105 @@
+Abertura
+ App abre em localhost:8501
+ Tela inicial carrega sem erro vermelho
+ Sidebar mostra caminho do banco
+ Banco SQLite é criado se não existir
+Login
+ Login com usuário seed funciona
+ Senha errada é recusada
+ OAuth simulado entra com professor cadastrado - não
+ Logout limpa a sessão
+Professores
+ Lista professores - ok
+ Cadastra novo professor - ok
+ Rejeita e-mail duplicado - ok
+ Altera dados do próprio professor - ok
+ Troca senha e novo login funciona
+ Upload de avatar funciona - ok
+ Upload acima de 2 MB é bloqueado
+Dojos
+ Lista academias/dojos - ok
+ Cadastra novo dojo - ok
+ Rejeita CNPJ/registro duplicado - ok
+ Edita dojo - ok
+ Exclui dojo sem quebrar o app - ok
+Alunos
+ Cadastra aluno - ok
+ Lista aluno - ok
+ Professor responsável vê dados completos - ok
+ Outro professor vê dados protegidos - ok
+ Atualiza aluno - ok
+ Exclui aluno - ok
+ Foto do aluno é convertida para .webp - ok
+Turmas e diários
+ Cadastra turma - ok
+ Mostra grade semanal - ok
+ Diário começa como PENDENTE
+ Diário só grava ao salvar
+ Professor não edita turma/diário de outro professor - ok
+ Salva aula como REALIZADO- ok
+ Salva aula como CANCELADO - ok
+ Anexo PDF/TXT é aceito - ok
+ Arquivo maior que 5 MB é recusado - ok acertar texto
+Aluno convidado
+ Professor A convida aluno do Professor B
+ Convite fica PENDENTE
+ Professor B recebe notificação
+ Professor B aprova
+ Aluno passa para APROVADO
+ Professor B recusa
+ Vínculo é removido
+Relatórios
+ KPIs carregam - ok
+ Quantidade de alunos ativos confere - ok
+ Quantidade de aulas realizadas confere - ok
+ Relatório não quebra com banco vazio - ok
+ 
+5º Kyu - 40 aulas
+4º Kyu - 60 aulas
+3º Kyu - 60 aulas
+2º Kyu - 90 aulas
+1º Kyu - 100 aulas
+1º Dan - 100 aulas
+2º Dan - 100 aulas
+3º Dan - 100 aulas
+4º Dan - 100 aulas
+5º Dan - 100 aulas
+6º Dan - 100 aulas
+
+13JUL
+. No diario de aula ao entrar com a descrição da aula pode guardar a foto compactada.
+. Alunos podem acompanhar sua evolução. 
+. Página de gerenciamento de eventos/projetos.
+. Lista de aniversário do mês - ok 13/07
+. Página mural de vendas
+. Técnica de cada graduação 
+. Lista de dojos com logo, nome do sensei, endereço e horário
+. Exportar dados de alunos ativos para a APA em planilha em excel 
+. Exportar dados de alunos aprovados para a APA em planilha em excel
+. Inclusão de alunos por Google forms
+. Inscrição em evento via Google forms
+
+16JUL
+Todos os alunos do dojo tem como responsável o sensei do dojo 
+No painel não está aparecendo todos os alunos na lista de faixa - ok
+inserir no Painel um box de eventos - ok
+alunos devem entrar com dados médicos e emergência. transferência de sangue ok
+ficha do aluno confirmar LGPD ok
+barra de rolagem CRUD de alunos - ok
+corrigir responsaveel e card de aluno - ok
+cadstro do aluno só nome, telefone e email.
+sistema dispara zap e email
+enviar por email ou zap link google forms para inscrição do aluno
+colocar a logo do RioAiki na janela de entrada
+rever as fichas de novos alunos do kuramadera - ok
+
+24JUL
+. Inclusão de alunos por Google forms
+	cadstro do aluno só nome, telefone e email.
+	sistema dispara zap e email
+	enviar por email ou zap link google forms para inscrição do aluno
+. Exportar dados de alunos ativos para a APA em planilha em excel 
+. Exportar dados de alunos aprovados para a APA em planilha em excel
+. Inscrição em evento via Google forms
+
+

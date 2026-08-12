@@ -1,0 +1,661 @@
+{% extends "base.html" %}
+
+{% block title %}🥋 DOJOCHO - Dashboard Geral{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title"><i class="fa-solid fa-house-chimney-crack" style="color: var(--primary);"></i> Painel Geral RioAiki</h1>
+        <p class="page-subtitle">Acompanhamento consolidado do grupo, alunos aptos a exame, alertas de aprovação e eventos.</p>
+    </div>
+    <div style="display: flex; gap: 0.5rem;">
+        <span class="badge badge-primary"><i class="fa-solid fa-shield-halved"></i> DOJOCHO Ativo</span>
+    </div>
+</div>
+
+<!-- TOP STATS METRICS -->
+<div class="grid-4" style="margin-bottom: 2rem;">
+    {% if current_user and current_user.role == 'STUDENT' %}
+    <a href="#dojos-lista" class="stat-card clickable" title="Ver Lista de Dojos do Grupo">
+        <div class="stat-icon" style="color: var(--primary);"><i class="fa-solid fa-torii-gate"></i></div>
+        <div>
+            <div class="stat-value" style="font-size: 1.1rem; font-weight: 700;">{{ student_obj.dojo.name if student_obj and student_obj.dojo else 'RioAiki Dojo' }}</div>
+            <div class="stat-label">Meu Dojo Principal <i class="fa-solid fa-arrow-down" style="font-size: 0.75rem; margin-left: 0.2rem; opacity: 0.6;"></i></div>
+        </div>
+    </a>
+    
+    <a href="#tabela-graduacoes" class="stat-card clickable cyan" title="Ver Requisitos de Graduação & Faixas">
+        <div class="stat-icon" style="color: var(--accent-cyan);"><i class="fa-solid fa-user-ninja"></i></div>
+        <div>
+            <div class="stat-value" style="font-size: 1.2rem; font-weight: 700;">{{ student_obj.belt_rank if student_obj else 'Aluno' }}</div>
+            <div class="stat-label">Minha Graduação Atual <i class="fa-solid fa-arrow-down" style="font-size: 0.75rem; margin-left: 0.2rem; opacity: 0.6;"></i></div>
+        </div>
+    </a>
+    
+    <a href="#aptos-exame" class="stat-card clickable emerald" title="Ver Meus Treinos Acumulados & Status">
+        <div class="stat-icon" style="color: var(--accent-emerald);"><i class="fa-solid fa-award"></i></div>
+        <div>
+            <div class="stat-value">{{ student_obj.total_attendances if student_obj else 0 }}</div>
+            <div class="stat-label">Treinos Acumulados <i class="fa-solid fa-arrow-down" style="font-size: 0.75rem; margin-left: 0.2rem; opacity: 0.6;"></i></div>
+        </div>
+    </a>
+    
+    <a href="#aptos-exame" class="stat-card clickable amber" title="Ver Detalhes do Status de Graduação">
+        <div class="stat-icon" style="color: var(--accent-amber);"><i class="fa-solid fa-certificate"></i></div>
+        <div>
+            <div class="stat-value" style="font-size: 1.1rem; font-weight: 700;">
+                {% if student_obj and student_obj.ready_for_exam %}Apto a Exame{% else %}Em Evolução{% endif %}
+            </div>
+            <div class="stat-label">Status de Graduação <i class="fa-solid fa-arrow-down" style="font-size: 0.75rem; margin-left: 0.2rem; opacity: 0.6;"></i></div>
+        </div>
+    </a>
+    {% else %}
+    <a href="/management" class="stat-card clickable" title="Ir para Gestão de Dojos">
+        <div class="stat-icon" style="color: var(--primary);"><i class="fa-solid fa-torii-gate"></i></div>
+        <div>
+            <div class="stat-value">{{ dojos_count }}</div>
+            <div class="stat-label">Dojos Registrados <i class="fa-solid fa-arrow-right" style="font-size: 0.75rem; margin-left: 0.2rem; opacity: 0.6;"></i></div>
+        </div>
+    </a>
+    
+    <a href="/management" class="stat-card clickable cyan" title="Ir para Lista de Alunos">
+        <div class="stat-icon" style="color: var(--accent-cyan);"><i class="fa-solid fa-user-ninja"></i></div>
+        <div>
+            <div class="stat-value">{{ active_students_count }}</div>
+            <div class="stat-label">Alunos Ativos ({{ inactive_students_count }} Inativos) <i class="fa-solid fa-arrow-right" style="font-size: 0.75rem; margin-left: 0.2rem; opacity: 0.6;"></i></div>
+        </div>
+    </a>
+    
+    <a href="#aptos-exame" class="stat-card clickable emerald" title="Ver Alunos Aptos a Exame">
+        <div class="stat-icon" style="color: var(--accent-emerald);"><i class="fa-solid fa-award"></i></div>
+        <div>
+            <div class="stat-value">{{ ready_for_exam|length }}</div>
+            <div class="stat-label">Aptos a Exame de Graduação <i class="fa-solid fa-arrow-down" style="font-size: 0.75rem; margin-left: 0.2rem; opacity: 0.6;"></i></div>
+        </div>
+    </a>
+    
+    <a href="#aprovacoes-pendentes" class="stat-card clickable amber" title="Ver Central de Aprovações">
+        <div class="stat-icon" style="color: var(--accent-amber);"><i class="fa-solid fa-bell"></i></div>
+        <div>
+            <div class="stat-value">{{ pending_guests|length + pending_classifieds|length }}</div>
+            <div class="stat-label">Aprovações Pendentes <i class="fa-solid fa-arrow-down" style="font-size: 0.75rem; margin-left: 0.2rem; opacity: 0.6;"></i></div>
+        </div>
+    </a>
+    {% endif %}
+</div>
+
+<!-- DASHBOARD MAIN GRID -->
+<div class="grid-dashboard">
+    
+    <!-- LEFT COLUMN -->
+    <div style="display: flex; flex-direction: column; gap: 2rem;">
+        
+        <!-- SECTION 1: ALERTAS DE APROVAÇÃO PENDENTES -->
+        {% if current_user and current_user.role in ['ADMIN', 'SENSEI'] and (pending_guests or pending_classifieds) %}
+        <div class="card" id="aprovacoes-pendentes" style="border-color: rgba(245, 158, 11, 0.4); scroll-margin-top: 100px;">
+            <div class="card-header">
+                <h3 class="card-title" style="color: var(--accent-amber);">
+                    <i class="fa-solid fa-triangle-exclamation"></i> Central de Aprovações Pendentes
+                </h3>
+                <span class="badge badge-amber">{{ pending_guests|length + pending_classifieds|length }} Pendentes</span>
+            </div>
+
+            <!-- PENDING GUESTS -->
+            {% if pending_guests %}
+            <h4 style="font-size: 0.95rem; margin-bottom: 0.8rem; color: var(--text-muted);"><i class="fa-solid fa-plane-arrival"></i> Alunos Convidados Aguardando Aprovação do Sensei</h4>
+            <div class="table-responsive" style="margin-bottom: 1.5rem;">
+                <table class="custom-table">
+                    <thead>
+                        <tr>
+                            <th>Aluno</th>
+                            <th>Dojo Origem</th>
+                            <th>Dojo Visita</th>
+                            <th>Sensei Responsável</th>
+                            <th>Ação</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for guest in pending_guests %}
+                        <tr>
+                            <td>
+                                <strong>{{ guest.student.name }}</strong>
+                                <br><small class="text-dim">{{ guest.student.belt_rank }}</small>
+                            </td>
+                            <td>{{ guest.origin_dojo.name }}</td>
+                            <td>{{ guest.target_dojo.name }}</td>
+                            <td>{{ guest.sensei.name }}</td>
+                            <td>
+                                <div style="display: flex; gap: 0.3rem;">
+                                    <button class="btn btn-emerald btn-sm" onclick="approveGuestRequest({{ guest.id }}, 'APPROVED')">
+                                        <i class="fa-solid fa-check"></i> Aprovar
+                                    </button>
+                                    <button class="btn btn-rose btn-sm" onclick="approveGuestRequest({{ guest.id }}, 'REJECTED')">
+                                        <i class="fa-solid fa-xmark"></i> Recusar
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
+
+            <!-- PENDING CLASSIFIEDS -->
+            {% if pending_classifieds %}
+            <h4 style="font-size: 0.95rem; margin-bottom: 0.8rem; color: var(--text-muted);"><i class="fa-solid fa-store"></i> Anúncios de Classificados Aguardando Aprovação do Sensei</h4>
+            <div class="table-responsive">
+                <table class="custom-table">
+                    <thead>
+                        <tr>
+                            <th>Título</th>
+                            <th>Anunciante</th>
+                            <th>Categoria / Preço</th>
+                            <th>Ação</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in pending_classifieds %}
+                        <tr>
+                            <td>
+                                <strong>{{ item.title }}</strong>
+                                <br><small class="text-dim">{{ item.description[:50] }}...</small>
+                            </td>
+                            <td>{{ item.author.name }}</td>
+                            <td>
+                                <span class="badge badge-primary">{{ item.category }}</span>
+                                <div style="color: var(--accent-emerald); font-weight: 700;">R$ {{ "%.2f"|format(item.price) }}</div>
+                            </td>
+                            <td>
+                                <div style="display: flex; gap: 0.3rem;">
+                                    <button class="btn btn-emerald btn-sm" onclick="approveClassified({{ item.id }}, 'APPROVED')">
+                                        <i class="fa-solid fa-check"></i> Aprovar Anúncio
+                                    </button>
+                                    <button class="btn btn-rose btn-sm" onclick="approveClassified({{ item.id }}, 'REJECTED')">
+                                        <i class="fa-solid fa-xmark"></i> Recusar
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
+
+        </div>
+        {% endif %}
+
+        {% if current_user and current_user.role == 'STUDENT' and (pending_guests or pending_classifieds) %}
+        <div class="card" style="border-color: rgba(245, 158, 11, 0.4);">
+            <div class="card-header">
+                <h3 class="card-title" style="color: var(--accent-amber);">
+                    <i class="fa-solid fa-clock"></i> Meus Itens Aguardando Aprovação do Sensei
+                </h3>
+                <span class="badge badge-amber">{{ pending_guests|length + pending_classifieds|length }} Em Análise</span>
+            </div>
+            {% if pending_guests %}
+            <div style="margin-bottom: 1rem;">
+                <h4 style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">Solicitações de Visita a Outros Dojos:</h4>
+                {% for guest in pending_guests %}
+                <div style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-surface); padding: 0.6rem 0.8rem; border-radius: var(--radius-sm); margin-bottom: 0.4rem;">
+                    <div>Visita ao <strong>{{ guest.target_dojo.name }}</strong></div>
+                    <span class="badge badge-amber"><i class="fa-solid fa-clock"></i> Em Análise</span>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            {% if pending_classifieds %}
+            <div>
+                <h4 style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">Meus Anúncios em Análise pelo Sensei:</h4>
+                {% for item in pending_classifieds %}
+                <div style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-surface); padding: 0.6rem 0.8rem; border-radius: var(--radius-sm); margin-bottom: 0.4rem;">
+                    <div><strong>{{ item.title }}</strong> (R$ {{ "%.2f"|format(item.price) }})</div>
+                    <span class="badge badge-amber"><i class="fa-solid fa-clock"></i> Aguardando Sensei</span>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- SECTION 2: ALUNOS APTOS A EXAME DE GRADUAÇÃO -->
+        <div class="card" id="aptos-exame" style="scroll-margin-top: 100px;">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fa-solid fa-award" style="color: var(--accent-emerald);"></i> Alunos Autorizados & Aptos a Prestar Exame</h3>
+                <span class="badge badge-emerald">{{ ready_for_exam|length }} Alunos Elegíveis</span>
+            </div>
+
+            <p style="font-size: 0.875rem; color: var(--text-muted); margin-bottom: 1rem;">
+                Acompanhamento automático com base no histórico de treinos acumulados e aprovação do Sensei responsável.
+            </p>
+
+            <div class="table-responsive">
+                <table class="custom-table">
+                    <thead>
+                        <tr>
+                            <th>ALUNO</th>
+                            <th>GRADUAÇÃO</th>
+                            <th>TREINOS</th>
+                            <th>SENSEI</th>
+                            <th>STATUS</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for student in ready_for_exam %}
+                        <tr>
+                            <td style="display: flex; align-items: center; gap: 0.75rem;">
+                                <img src="{{ student.photo_url or 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100' }}" style="width: 36px; height: 36px; border-radius: 50%; object-fit: cover;">
+                                <div>
+                                    <strong>{{ student.name }}</strong>
+                                    <br><small style="color: var(--text-muted);">{{ student.email }} · {{ student.dojo.name if student.dojo else 'Não atribuído' }}</small>
+                                </div>
+                            </td>
+                            <td><span class="badge badge-primary">{{ student.belt_rank }}</span></td>
+                            <td><strong style="color: var(--accent-cyan); font-size: 1rem;">{{ student.total_attendances }}</strong> / {{ student.req_attendances or (student.belt_rank|req_attendances) }} treinos</td>
+                            <td>{{ student.supervisor_sensei.name if student.supervisor_sensei else 'Geral' }}</td>
+                            <td>
+                                {% if current_user and current_user.get("role") in ["ADMIN", "SENSEI"] %}
+                                <button type="button" class="btn-approve-exam" onclick="approveStudentExam({{ student.id }}, '{{ student.name }}')" style="background: rgba(16, 185, 129, 0.15); color: #10B981; border: 1px solid rgba(16, 185, 129, 0.4); padding: 0.45rem 0.95rem; border-radius: 20px; font-weight: 700; font-size: 0.8rem; cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem; transition: var(--transition);" onmouseover="this.style.background='#10B981'; this.style.color='#000';" onmouseout="this.style.background='rgba(16, 185, 129, 0.15)'; this.style.color='#10B981';" title="Clique para aprovar o exame de graduação deste aluno">
+                                    <i class="fa-solid fa-circle-check"></i> APROVADO
+                                </button>
+                                {% else %}
+                                <span class="badge badge-emerald" style="padding: 0.45rem 0.95rem; border-radius: 20px; font-weight: 700; font-size: 0.8rem;">
+                                    <i class="fa-solid fa-circle-check"></i> APROVADO
+                                </span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 2rem;">Nenhum aluno atingiu os requisitos mínimos neste momento.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- SECTION 3: TABELA DE GRADUAÇÕES & CORES DE FAIXA -->
+        <div class="card" id="tabela-graduacoes" style="scroll-margin-top: 100px;">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fa-solid fa-graduation-cap" style="color: var(--accent-amber);"></i> Graduações & Cores de Faixas
+                </h3>
+            </div>
+
+            <div class="table-responsive" style="max-height: 380px; overflow-y: auto;">
+                <table class="custom-table" style="font-size: 0.85rem;">
+                    <thead>
+                        <tr>
+                            <th>Graduação</th>
+                            <th>Cor da Faixa</th>
+                            <th>Aulas Requeridas</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in belt_colors_list %}
+                        <tr>
+                            <td><strong>{{ item.rank }}</strong></td>
+                            <td>
+                                {% if 'amarela' in item.color.lower() %}
+                                    <span class="badge badge-belt-fixed" style="background: #FFDA55; color: #000; font-weight: 700;" title="Clique para ver o programa de técnicas da {{ item.rank }}" data-rank="{{ item.rank }}" data-color="{{ item.color }}" data-req="{{ item.requirements or '' }}" data-syllabus="{{ item.syllabus or '' }}" data-video="{{ item.video_url or '' }}" onclick="openBeltModalFromElement(this)"><i class="fa-solid fa-ribbon"></i> {{ item.color|capitalize }}</span>
+                                {% elif 'roxa' in item.color.lower() %}
+                                    <span class="badge badge-belt-fixed" style="background: #A855F7; color: #FFF; font-weight: 700;" title="Clique para ver o programa de técnicas da {{ item.rank }}" data-rank="{{ item.rank }}" data-color="{{ item.color }}" data-req="{{ item.requirements or '' }}" data-syllabus="{{ item.syllabus or '' }}" data-video="{{ item.video_url or '' }}" onclick="openBeltModalFromElement(this)"><i class="fa-solid fa-ribbon"></i> {{ item.color|capitalize }}</span>
+                                {% elif 'verde' in item.color.lower() %}
+                                    <span class="badge badge-belt-fixed" style="background: #10B981; color: #FFF; font-weight: 700;" title="Clique para ver o programa de técnicas da {{ item.rank }}" data-rank="{{ item.rank }}" data-color="{{ item.color }}" data-req="{{ item.requirements or '' }}" data-syllabus="{{ item.syllabus or '' }}" data-video="{{ item.video_url or '' }}" onclick="openBeltModalFromElement(this)"><i class="fa-solid fa-ribbon"></i> {{ item.color|capitalize }}</span>
+                                {% elif 'azul' in item.color.lower() %}
+                                    <span class="badge badge-belt-fixed" style="background: #0284C7; color: #FFF; font-weight: 700;" title="Clique para ver o programa de técnicas da {{ item.rank }}" data-rank="{{ item.rank }}" data-color="{{ item.color }}" data-req="{{ item.requirements or '' }}" data-syllabus="{{ item.syllabus or '' }}" data-video="{{ item.video_url or '' }}" onclick="openBeltModalFromElement(this)"><i class="fa-solid fa-ribbon"></i> {{ item.color|capitalize }}</span>
+                                {% elif 'marrom' in item.color.lower() %}
+                                    <span class="badge badge-belt-fixed" style="background: #78350F; color: #FFF; font-weight: 700;" title="Clique para ver o programa de técnicas da {{ item.rank }}" data-rank="{{ item.rank }}" data-color="{{ item.color }}" data-req="{{ item.requirements or '' }}" data-syllabus="{{ item.syllabus or '' }}" data-video="{{ item.video_url or '' }}" onclick="openBeltModalFromElement(this)"><i class="fa-solid fa-ribbon"></i> {{ item.color|capitalize }}</span>
+                                {% elif 'preta' in item.color.lower() %}
+                                    <span class="badge badge-belt-fixed" style="background: #0F172A; border: 1px solid #475569; color: #FFF; font-weight: 700;" title="Clique para ver o programa de técnicas da {{ item.rank }}" data-rank="{{ item.rank }}" data-color="{{ item.color }}" data-req="{{ item.requirements or '' }}" data-syllabus="{{ item.syllabus or '' }}" data-video="{{ item.video_url or '' }}" onclick="openBeltModalFromElement(this)"><i class="fa-solid fa-ribbon"></i> {{ item.color|capitalize }}</span>
+                                {% else %}
+                                    <span class="badge badge-secondary badge-belt-fixed" title="Clique para ver o programa de técnicas da {{ item.rank }}" data-rank="{{ item.rank }}" data-color="{{ item.color }}" data-req="{{ item.requirements or '' }}" data-syllabus="{{ item.syllabus or '' }}" data-video="{{ item.video_url or '' }}" onclick="openBeltModalFromElement(this)"><i class="fa-solid fa-ribbon"></i> {{ item.color|capitalize }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if item.requirements %}
+                                    <span class="badge badge-cyan" style="font-weight: 600;"><i class="fa-solid fa-clock"></i> {{ item.requirements }}</span>
+                                {% else %}
+                                    <span style="color: var(--text-muted);">-</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ANIVERSARIANTES DO MÊS -->
+        <div class="card" id="aniversariantes" style="scroll-margin-top: 100px;">
+            <div class="card-header">
+                <h3 class="card-title" style="display: flex; align-items: center; gap: 0.6rem;">
+                    <span style="width: 32px; height: 32px; border-radius: 8px; background: rgba(56, 189, 248, 0.15); display: flex; align-items: center; justify-content: center; color: #38BDF8;">
+                        <i class="fa-solid fa-cake-candles"></i>
+                    </span>
+                    <span>Aniversariantes do Mês</span>
+                </h3>
+            </div>
+            <div style="padding: 1rem; display: flex; flex-direction: column; gap: 0.6rem;">
+                {% if aniversariantes %}
+                    {% for user in aniversariantes %}
+                    <div style="display: flex; align-items: center; gap: 0.75rem; padding: 0.6rem 0.85rem; background: var(--bg-surface); border-radius: var(--radius-sm); border: 1px solid var(--border-color); transition: var(--transition);"
+                         onmouseover="this.style.borderColor='rgba(56, 189, 248, 0.4)'; this.style.transform='translateY(-1px)';"
+                         onmouseout="this.style.borderColor='var(--border-color)'; this.style.transform='none';">
+                        <div style="width: 38px; height: 38px; border-radius: 50%; background: linear-gradient(135deg, #0284C7, #38BDF8); display: flex; align-items: center; justify-content: center; color: #FFF; font-weight: 700; font-size: 0.85rem; flex-shrink: 0; box-shadow: 0 2px 10px rgba(56, 189, 248, 0.25);">
+                            {{ user.name[:2]|upper }}
+                        </div>
+                        <div style="flex: 1;">
+                            <div style="font-weight: 600; color: #F8FAFC; font-size: 0.9rem;">{{ user.name }}</div>
+                            <div style="font-size: 0.75rem; color: var(--text-muted);">
+                                {{ user.belt_rank }} · {{ user.dojo.name if user.dojo else 'Sem Dojo' }}
+                            </div>
+                        </div>
+                        <div style="font-size: 0.8rem; color: #38BDF8; font-weight: 600; white-space: nowrap; display: flex; align-items: center; gap: 0.4rem; background: rgba(56, 189, 248, 0.12); padding: 0.35rem 0.65rem; border-radius: 20px; border: 1px solid rgba(56, 189, 248, 0.25);">
+                            <i class="fa-solid fa-cake-candles" style="font-size: 0.75rem;"></i> {{ user.birth_date }}
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div style="text-align: center; padding: 1.5rem; color: var(--text-muted);">
+                        <i class="fa-solid fa-calendar" style="font-size: 1.5rem; margin-bottom: 0.5rem; display: block;"></i>
+                        Nenhum aniversariante este mês
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+    </div>
+
+    <!-- RIGHT COLUMN -->
+    <div style="display: flex; flex-direction: column; gap: 2rem;">
+        
+        <!-- UPCOMING EVENTS CARD -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fa-solid fa-calendar-star" style="color: var(--accent-cyan);"></i> Próximos Eventos RioAiki</h3>
+                <a href="/events" class="btn btn-secondary btn-sm">Ver Todos</a>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 1rem;">
+                {% for event in events %}
+                <a href="/events#event-{{ event.id }}" style="text-decoration: none; color: inherit; display: block;" title="Ver detalhes completos do evento {{ event.title }}">
+                    <div style="background: var(--bg-surface); padding: 1rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); cursor: pointer; transition: var(--transition);"
+                         onmouseover="this.style.borderColor='var(--accent-cyan)'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 16px rgba(0,0,0,0.3)';"
+                         onmouseout="this.style.borderColor='var(--border-color)'; this.style.transform='none'; this.style.boxShadow='none';">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div style="font-size: 0.75rem; color: var(--accent-cyan); font-weight: 700; text-transform: uppercase;">
+                                <i class="fa-regular fa-clock"></i> {{ event.date_time }}
+                            </div>
+                            <span style="font-size: 0.75rem; color: var(--accent-cyan); font-weight: 600;">
+                                Ver Evento <i class="fa-solid fa-chevron-right" style="font-size: 0.7rem;"></i>
+                            </span>
+                        </div>
+                        <h4 style="font-size: 1rem; margin: 0.4rem 0; color: white; font-weight: 700;">{{ event.title }}</h4>
+                        <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.4rem;"><i class="fa-solid fa-location-dot" style="color: var(--accent-cyan);"></i> {{ event.location }}</p>
+                        <div style="font-size: 0.8rem; color: var(--text-muted);">
+                            <strong>Ministrante:</strong> {{ event.main_sensei.name if event.main_sensei else 'RioAiki' }}
+                        </div>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- DOJO SUMMARY LIST -->
+        <div class="card" id="dojos-lista" style="scroll-margin-top: 100px;">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fa-solid fa-kaaba" style="color: var(--primary);"></i> Dojos do Grupo</h3>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 0.8rem;">
+                {% for dojo in dojos %}
+                <a href="https://www.google.com/maps/search/?api=1&query={{ (dojo.name + ' ' + dojo.address)|urlencode }}" target="_blank" style="text-decoration: none; color: inherit; display: block;" title="Abrir {{ dojo.name }} no Google Maps">
+                    <div style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-surface); padding: 0.8rem 1rem; border-radius: var(--radius-sm); cursor: pointer; transition: var(--transition); border: 1px solid var(--border-color);"
+                         onmouseover="this.style.borderColor='var(--accent-cyan)'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.3)';"
+                         onmouseout="this.style.borderColor='var(--border-color)'; this.style.transform='none'; this.style.boxShadow='none';">
+                        <div>
+                            <strong style="color: white; font-size: 0.95rem;">{{ dojo.name }}{% if dojo.academy %} <span style="font-weight: 400; color: var(--accent-cyan); font-size: 0.85rem;">({{ dojo.academy }})</span>{% endif %}</strong>
+                            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.2rem;">
+                                <i class="fa-solid fa-location-dot" style="color: var(--accent-cyan);"></i> {{ dojo.address }}
+                            </div>
+                        </div>
+                        <span class="badge badge-cyan" style="font-weight: 700; white-space: nowrap; display: flex; align-items: center; gap: 0.4rem;">
+                            <span>{{ dojo.members|length }} MEMBROS</span>
+                            <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 0.7rem; opacity: 0.8;"></i>
+                        </span>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+
+    </div>
+
+</div>
+
+<!-- MODAL FLUTUANTE DE CONTEÚDO DE EXAME DE FAIXA -->
+<div class="modal-backdrop" id="modal-belt-syllabus" onclick="closeBeltModal(event)">
+    <div class="modal-content" style="max-width: 680px; border-radius: var(--radius-lg); padding: 0; overflow: hidden; border: 1px solid var(--border-highlight);" onclick="event.stopPropagation()">
+        <!-- CABEÇALHO COM GRADIENTE DINÂMICO CONFORME A FAIXA -->
+        <div id="modal-belt-header" style="padding: 1.4rem 1.8rem; background: linear-gradient(135deg, var(--primary), #4C1D95); color: white; display: flex; align-items: center; justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 0.9rem;">
+                <div style="width: 44px; height: 44px; border-radius: 50%; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-size: 1.35rem; backdrop-filter: blur(4px);">
+                    <i class="fa-solid fa-ribbon"></i>
+                </div>
+                <div>
+                    <h3 id="modal-belt-title" style="margin: 0; font-size: 1.25rem; color: white;">Programa de Exame</h3>
+                    <div style="display: flex; gap: 0.5rem; margin-top: 0.3rem; align-items: center;">
+                        <span id="modal-belt-badge" class="badge" style="background: rgba(255,255,255,0.25); color: white; font-weight: 800; letter-spacing: 0.05em;">COR</span>
+                        <span id="modal-belt-req" class="badge badge-cyan" style="font-weight: 700;"><i class="fa-solid fa-clock"></i> Requisitos</span>
+                    </div>
+                </div>
+            </div>
+            <button class="modal-close" onclick="hideBeltModal()" style="color: white; opacity: 0.9; font-size: 1.8rem; background: none; border: none; cursor: pointer; padding: 0 0.5rem;">&times;</button>
+        </div>
+
+        <!-- CORPO DO MODAL (TÉCNICAS E CONTEÚDO DO EXAME) -->
+        <div style="padding: 1.5rem 1.8rem; max-height: 65vh; overflow-y: auto;">
+            <!-- CONTAINER DE VÍDEO DO YOUTUBE (SE HOUVER) -->
+            <div id="modal-belt-video-container" style="display: none;"></div>
+
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.6rem;">
+                <h4 style="font-size: 0.875rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin: 0;">
+                    <i class="fa-solid fa-scroll" style="color: var(--accent-cyan); margin-right: 0.4rem;"></i> Conteúdo & Técnicas Requeridas (Seimeikan)
+                </h4>
+            </div>
+
+            <div id="modal-belt-body" style="font-size: 0.875rem; line-height: 1.65; color: var(--text-main); background: var(--bg-surface); padding: 1.25rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); white-space: pre-wrap; font-family: 'Plus Jakarta Sans', sans-serif;">
+                Nenhum programa cadastrado.
+            </div>
+        </div>
+
+        <!-- RODAPÉ DO MODAL -->
+        <div style="padding: 1rem 1.8rem; background: var(--bg-card); border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap;">
+            <small style="color: var(--text-muted); font-size: 0.8rem;"><i class="fa-solid fa-circle-info"></i> Tabela oficial RioAiki Seimeikan</small>
+            <div style="display: flex; gap: 0.5rem;">
+                <button class="btn btn-emerald btn-sm" onclick="downloadBeltSyllabusTxt()"><i class="fa-solid fa-file-arrow-down"></i> Baixar Técnicas (.txt)</button>
+                <button class="btn btn-secondary btn-sm" onclick="hideBeltModal()" style="padding: 0.4rem 1.2rem;">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentBeltData = { rank: '', color: '', req: '', syllabus: '' };
+
+function openBeltModalFromElement(el) {
+    const rank = el.getAttribute('data-rank') || '';
+    const color = el.getAttribute('data-color') || '';
+    const req = el.getAttribute('data-req') || '';
+    const syllabus = el.getAttribute('data-syllabus') || '';
+    const video = el.getAttribute('data-video') || '';
+    openBeltModal(rank, color, req, syllabus, video);
+}
+
+function openBeltModal(rank, color, req, syllabusText, videoUrl) {
+    currentBeltData = { rank: rank, color: color, req: req, syllabus: syllabusText };
+
+    const modal = document.getElementById('modal-belt-syllabus');
+    const header = document.getElementById('modal-belt-header');
+    const title = document.getElementById('modal-belt-title');
+    const badge = document.getElementById('modal-belt-badge');
+    const reqSpan = document.getElementById('modal-belt-req');
+    const body = document.getElementById('modal-belt-body');
+    const videoContainer = document.getElementById('modal-belt-video-container');
+
+    title.innerText = rank + ' - Exame de Graduação';
+    badge.innerText = color.toUpperCase();
+    reqSpan.innerHTML = '<i class="fa-solid fa-clock"></i> ' + (req ? req : 'Verificar com Sensei');
+
+    // Estilizar cabeçalho de acordo com a cor da faixa
+    const cLower = color.toLowerCase();
+    if (cLower.includes('amarela')) {
+        header.style.background = 'linear-gradient(135deg, #FFDA55, #EAB308)';
+        header.style.color = '#000';
+        title.style.color = '#000';
+        badge.style.background = 'rgba(0,0,0,0.18)';
+        badge.style.color = '#000';
+        reqSpan.style.background = 'rgba(0,0,0,0.2)';
+        reqSpan.style.color = '#000';
+    } else if (cLower.includes('roxa')) {
+        header.style.background = 'linear-gradient(135deg, #A855F7, #7E22CE)';
+        header.style.color = '#FFF';
+        title.style.color = '#FFF';
+        badge.style.background = 'rgba(255,255,255,0.25)';
+        badge.style.color = '#FFF';
+        reqSpan.style.background = 'rgba(255,255,255,0.2)';
+        reqSpan.style.color = '#FFF';
+    } else if (cLower.includes('verde')) {
+        header.style.background = 'linear-gradient(135deg, #10B981, #047857)';
+        header.style.color = '#FFF';
+        title.style.color = '#FFF';
+        badge.style.background = 'rgba(255,255,255,0.25)';
+        badge.style.color = '#FFF';
+        reqSpan.style.background = 'rgba(255,255,255,0.2)';
+        reqSpan.style.color = '#FFF';
+    } else if (cLower.includes('azul')) {
+        header.style.background = 'linear-gradient(135deg, #0284C7, #0369A1)';
+        header.style.color = '#FFF';
+        title.style.color = '#FFF';
+        badge.style.background = 'rgba(255,255,255,0.25)';
+        badge.style.color = '#FFF';
+        reqSpan.style.background = 'rgba(255,255,255,0.2)';
+        reqSpan.style.color = '#FFF';
+    } else if (cLower.includes('marrom')) {
+        header.style.background = 'linear-gradient(135deg, #78350F, #451A03)';
+        header.style.color = '#FFF';
+        title.style.color = '#FFF';
+        badge.style.background = 'rgba(255,255,255,0.25)';
+        badge.style.color = '#FFF';
+        reqSpan.style.background = 'rgba(255,255,255,0.2)';
+        reqSpan.style.color = '#FFF';
+    } else if (cLower.includes('preta')) {
+        header.style.background = 'linear-gradient(135deg, #1E293B, #0F172A)';
+        header.style.color = '#FFF';
+        title.style.color = '#FFF';
+        badge.style.background = 'rgba(255,255,255,0.25)';
+        badge.style.color = '#FFF';
+        reqSpan.style.background = 'rgba(255,255,255,0.2)';
+        reqSpan.style.color = '#FFF';
+    } else {
+        header.style.background = 'linear-gradient(135deg, var(--primary), #4C1D95)';
+        header.style.color = '#FFF';
+        title.style.color = '#FFF';
+    }
+
+    // Processar Vídeo do YouTube se houver
+    if (videoUrl && videoUrl.trim()) {
+        let embedUrl = videoUrl;
+        if (videoUrl.includes('youtu.be/')) {
+            const vidId = videoUrl.split('youtu.be/')[1].split('?')[0];
+            embedUrl = 'https://www.youtube.com/embed/' + vidId;
+        } else if (videoUrl.includes('watch?v=')) {
+            const vidId = videoUrl.split('watch?v=')[1].split('&')[0];
+            embedUrl = 'https://www.youtube.com/embed/' + vidId;
+        }
+
+        videoContainer.style.display = 'block';
+        videoContainer.innerHTML = `
+            <div style="margin-bottom: 1.2rem; background: var(--bg-card); border-radius: var(--radius-sm); border: 1px solid rgba(244, 63, 94, 0.4); padding: 1rem; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.8rem;">
+                    <strong style="color: #FDA4AF; font-size: 0.85rem;"><i class="fa-brands fa-youtube" style="color: #F43F5E;"></i> Vídeo Demonstrativo do Exame</strong>
+                    <a href="${videoUrl}" target="_blank" class="btn btn-sm" style="background: #E11D48; color: white; padding: 0.3rem 0.75rem; font-size: 0.75rem; border-radius: 6px; font-weight: 700; text-decoration: none;">
+                        <i class="fa-solid fa-arrow-up-right-from-square"></i> Abrir no YouTube
+                    </a>
+                </div>
+                <div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; border-radius: 8px; border: 1px solid var(--border-color);">
+                    <iframe src="${embedUrl}" style="position: absolute; top:0; left:0; width:100%; height:100%; border:0;" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                </div>
+            </div>
+        `;
+    } else {
+        videoContainer.style.display = 'none';
+        videoContainer.innerHTML = '';
+    }
+
+    if (syllabusText && syllabusText.trim()) {
+        body.textContent = syllabusText.trim();
+    } else {
+        body.innerHTML = '<em>Nenhuma técnica ou programa detalhado registrado no momento para esta faixa.</em>';
+    }
+
+    modal.classList.add('active');
+}
+
+function downloadBeltSyllabusTxt() {
+    if (!currentBeltData.rank) return;
+    const divider = "=====================================================\n";
+    const header = `${divider}RIOAIKI SEIMEIKAN - PROGRAMA DE EXAME DE GRADUAÇÃO\nGraduação: ${currentBeltData.rank.toUpperCase()}\nCor da Faixa: ${currentBeltData.color.toUpperCase()}\nRequisito Mínimo: ${currentBeltData.req || 'Consulte o Sensei'}\n${divider}\n\n`;
+    const content = header + (currentBeltData.syllabus ? currentBeltData.syllabus.trim() : "Nenhuma técnica detalhada cadastrada.");
+    
+    const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    const safeRank = currentBeltData.rank.replace(/[^a-z0-9]/gi, '_');
+    a.download = `Exame_RioAiki_${safeRank}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+function hideBeltModal() {
+    const modal = document.getElementById('modal-belt-syllabus');
+    if (modal) modal.classList.remove('active');
+}
+
+function closeBeltModal(event) {
+    if (event.target.id === 'modal-belt-syllabus') {
+        hideBeltModal();
+    }
+}
+
+async function approveStudentExam(userId, userName) {
+    if (!confirm(`Deseja confirmar a aprovação no exame do aluno(a) ${userName}?`)) {
+        return;
+    }
+    try {
+        const response = await fetch(`/api/users/${userId}/approve-exam`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        const data = await response.json();
+        if (response.ok && data.success) {
+            alert(data.message || 'Aluno aprovado com sucesso!');
+            window.location.href = '/';
+        } else {
+            alert(data.detail || data.message || 'Erro ao aprovar exame.');
+        }
+    } catch (err) {
+        console.error(err);
+        alert('Erro de conexão ao servidor.');
+    }
+}
+</script>
+{% endblock %}

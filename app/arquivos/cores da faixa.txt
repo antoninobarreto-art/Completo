@@ -1,0 +1,12 @@
+graduação - cor da faixa
+5º Kyu - amarela
+4º Kyu - roxa
+3º Kyu - verde
+2º Kyu - azul
+1º Kyu - marrom
+1º Dan Shodan - preta
+2º Dan Nidan - preta
+3º Dan Sandan - preta
+4º Dan Yondan - preta
+5º Dan Godan - preta
+6º Dan Rokudan - preta

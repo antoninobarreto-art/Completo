@@ -1,0 +1,411 @@
+{% extends "base.html" %}
+
+{% block title %}🥋 DOJOCHO - Diários de Aula & Grade Semanal{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title"><i class="fa-solid fa-clipboard-list" style="color: var(--primary);"></i> Diários de Aula</h1>
+        <p class="page-subtitle">Grade semanal de horários do Grupo RioAiki com lista de presenças e diários de treino.</p>
+    </div>
+    <div style="display: flex; gap: 0.5rem;">
+        <button class="btn btn-emerald" data-modal="modal-new-schedule">
+            <i class="fa-solid fa-plus"></i> Novo Horário
+        </button>
+        <button class="btn btn-amber" data-modal="modal-request-guest">
+            <i class="fa-solid fa-user-check"></i> Aluno Convidado
+        </button>
+    </div>
+</div>
+
+<!-- DATE NAVIGATOR & HEADER BAR -->
+<div class="diarios-header-bar">
+    <div style="display: flex; align-items: center; gap: 0.75rem;">
+        <i class="fa-regular fa-calendar-check" style="font-size: 1.5rem; color: var(--accent-cyan);"></i>
+        <div>
+            <h3 style="font-size: 1.15rem; color: white;">Grade Semanal de Treinos</h3>
+            <span style="font-size: 0.8rem; color: var(--text-muted);">Visualização em colunas por dia da semana</span>
+        </div>
+    </div>
+
+    <!-- DATE PICKER / RANGE NAVIGATOR -->
+    <div class="date-navigator">
+        <button class="btn btn-secondary btn-sm" onclick="changeWeek(-1)"><i class="fa-solid fa-chevron-left"></i></button>
+        <span class="date-range-text"><i class="fa-regular fa-calendar"></i> <span id="week-dates-span">20/07/2026 até 26/07/2026</span> <i class="fa-solid fa-caret-down"></i></span>
+        <button class="btn btn-secondary btn-sm" onclick="changeWeek(1)"><i class="fa-solid fa-chevron-right"></i></button>
+    </div>
+</div>
+
+<!-- FILTER BAR -->
+<div class="filter-bar">
+    <div class="filter-group">
+        <span class="filter-label"><i class="fa-solid fa-filter"></i> Filtrar Dojo:</span>
+        <select id="dojo-filter" class="form-select">
+            <option value="all">Todos os Dojos RioAiki</option>
+            {% for dojo in dojos %}
+                <option value="{{ dojo.id }}">{{ dojo.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="filter-group">
+        <span class="filter-label">Status do Diário:</span>
+        <select id="status-filter" class="form-select">
+            <option value="all">Todos os Status</option>
+            <option value="Realizado">Realizado</option>
+            <option value="Pendente">Pendente</option>
+        </select>
+    </div>
+</div>
+
+<!-- WEEKLY KANBAN GRID MODEL (DIÁRIOS DE AULA) -->
+<div class="weekly-grid">
+    {% for col in weekly_columns %}
+    <div class="weekday-column">
+        <div class="weekday-header">
+            {{ col.label }}
+        </div>
+
+        {% for item in col.cards %}
+        <div class="diario-card {{ item.stripe }} filterable-item" 
+             data-dojo="{{ item.schedule.dojo_id }}" 
+             data-status="{{ item.status }}"
+             onclick="openSessionModal({{ item.schedule.id }}, '{{ item.schedule.title }}', '{{ item.schedule.dojo.name }}', {{ item.schedule.dojo_id }}, [{% if item.session and item.session.attendances %}{% for att in item.session.attendances %}{{ att.user_id }},{% endfor %}{% endif %}])">
+            
+            <div class="diario-card-header">
+                <span class="diario-time">
+                    <i class="fa-regular fa-clock"></i> {{ item.schedule.start_time }} até {{ item.schedule.end_time }}
+                </span>
+                <div>
+                    {% if item.session and item.session.photo_url %}
+                        <i class="fa-solid fa-camera" style="color: var(--accent-cyan); font-size: 0.75rem; margin-right: 4px;" title="Foto do Treino Anexada"></i>
+                    {% endif %}
+                    {% if item.session and item.session.document_url %}
+                        <i class="fa-solid fa-file-lines" style="color: var(--accent-amber); font-size: 0.75rem; margin-right: 4px;" title="Anexo / Plano de Aula"></i>
+                    {% endif %}
+                    <i class="fa-solid fa-ellipsis diario-menu" title="Opções"></i>
+                </div>
+            </div>
+
+            <div class="diario-dojo">{{ item.schedule.dojo.name }}</div>
+            <div class="diario-discipline">Aikidô - {{ item.schedule.title }}</div>
+            <div class="diario-instructor">{{ item.schedule.instructor.name if item.schedule.instructor else 'Sensei RioAiki' }}</div>
+
+            <div class="diario-footer">
+                {% if item.status == 'Realizado' %}
+                    <span class="badge badge-emerald">Realizado</span>
+                {% else %}
+                    <span class="badge badge-cyan">Pendente</span>
+                {% endif %}
+            </div>
+        </div>
+        {% else %}
+        <div style="text-align: center; color: var(--text-dim); font-size: 0.8rem; padding: 2rem 0.5rem; font-style: italic;">
+            Sem treinos neste dia
+        </div>
+        {% endfor %}
+    </div>
+    {% endfor %}
+</div>
+
+<!-- MODAL CRIAR AULA / REGISTRAR CHAMADA -->
+<div class="modal-backdrop" id="modal-session">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 style="color: white;" id="modal-session-title"><i class="fa-solid fa-clipboard-user"></i> Chamada da Aula</h3>
+            <button class="modal-close">&times;</button>
+        </div>
+        <form action="/api/sessions/create-with-attendance" method="POST" enctype="multipart/form-data">
+            <input type="hidden" name="schedule_id" id="modal-schedule-id">
+            
+            <div class="form-group">
+                <label class="form-label">Data da Aula</label>
+                <input type="date" name="date" class="form-input" required value="2026-07-23">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Observações da Aula (Técnicas / Foco)</label>
+                <textarea name="notes" class="form-input" rows="2" placeholder="Ex: Katatetori Ikkyo, Suwariwaza, Aiki-jo..."></textarea>
+            </div>
+
+            <!-- ARQUIVOS E ANEXOS (IMAGEM E DOCUMENTO DE TEXTO COM NOVAS CORES) -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                <div class="form-group">
+                    <label class="form-label" style="color: var(--accent-cyan); font-weight: 700;">
+                        <i class="fa-solid fa-camera"></i> Foto do Treino / Aula
+                    </label>
+                    <input type="file" name="photo_file" accept="image/png, image/jpeg, image/webp" class="form-file-input" onchange="validateFileSize(this, 5)">
+                    <small style="font-size: 0.75rem; color: var(--text-dim); display: block; margin-top: 0.3rem;">
+                        <i class="fa-solid fa-circle-info"></i> JPG, PNG ou WEBP (Máx: <strong>5 MB</strong>)
+                    </small>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" style="color: var(--accent-amber); font-weight: 700;">
+                        <i class="fa-solid fa-file-lines"></i> Anexo de Texto / Plano de Aula
+                    </label>
+                    <input type="file" name="doc_file" accept=".pdf, .txt, .doc, .docx" class="form-file-input" onchange="validateFileSize(this, 10)">
+                    <small style="font-size: 0.75rem; color: var(--text-dim); display: block; margin-top: 0.3rem;">
+                        <i class="fa-solid fa-circle-info"></i> PDF, TXT, DOCX (Máx: <strong>10 MB</strong>)
+                    </small>
+                </div>
+            </div>
+
+            <!-- SELEÇÃO DE ALUNOS COM BOTÃO PARA ADICIONAR ALUNO SOMENTE NESTA AULA -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin: 1rem 0 0.5rem 0; flex-wrap: wrap; gap: 0.5rem;">
+                <h4 style="font-size: 0.9rem; color: var(--accent-cyan); margin: 0;"><i class="fa-solid fa-users"></i> Selecione os Alunos Presentes:</h4>
+                <button type="button" class="btn btn-primary btn-sm" onclick="toggleSingleClassGuestInput()">
+                    <i class="fa-solid fa-user-plus"></i> Adicionar Aluno Somente Nesta Aula
+                </button>
+            </div>
+
+            <!-- PAINEL EXPANSÍVEL: ALUNO SOMENTE NESTA AULA (PALETA DO SISTEMA + DROPDOWN) -->
+            <div id="single-class-guest-panel" style="display: none; background: #1E293B; border: 1px solid var(--border-highlight); padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1rem; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
+                <div style="font-size: 0.85rem; color: var(--accent-cyan); font-weight: 700; margin-bottom: 0.6rem; display: flex; align-items: center; gap: 0.4rem;">
+                    <i class="fa-solid fa-user-clock"></i> Inclusão de Aluno Convidado (Participará Apenas Desta Aula)
+                </div>
+
+                <div class="form-group" style="margin-bottom: 0.75rem;">
+                    <label class="form-label" style="font-size: 0.8rem; color: var(--text-muted);">
+                        <i class="fa-solid fa-list"></i> Selecionar Aluno do Grupo RioAiki (Dropdown):
+                    </label>
+                    <select name="single_class_guest_student_id" class="form-select">
+                        <option value="">-- Escolha um Aluno Cadastrado no Grupo --</option>
+                        {% for student in students %}
+                            <option value="{{ student.id }}">{{ student.name }} ({{ student.belt_rank }}) - {{ student.dojo.name if student.dojo else 'Sem Dojo' }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 0.3rem;">
+                    <label class="form-label" style="font-size: 0.8rem; color: var(--text-muted);">
+                        <i class="fa-solid fa-pen-to-square"></i> Ou Digite o Nome de um Visitante Externo:
+                    </label>
+                    <input type="text" name="single_class_guest_name" id="single-guest-name-input" class="form-input" placeholder="Ex: Marcos Souza (Visitante Externo de SP)">
+                </div>
+
+                <small style="font-size: 0.75rem; color: var(--text-dim); display: block; margin-top: 0.4rem;">
+                    <i class="fa-solid fa-shield"></i> Este aluno será incluído com status de Convidado exclusivamente no diário de presença desta aula.
+                </small>
+            </div>
+
+            <!-- CAIXA DE CHECKLIST COM CORES APRIMORADAS -->
+            <div class="students-checklist-box" id="students-checklist-box">
+                {% for student in students %}
+                {% set guest_dojo_ids = [] %}
+                {% if student.guest_requests %}
+                    {% for g in student.guest_requests %}
+                        {% if g.status == 'APPROVED' %}
+                            {% set _ = guest_dojo_ids.append(g.target_dojo_id|string) %}
+                        {% endif %}
+                    {% endfor %}
+                {% endif %}
+                <label class="student-check-item" 
+                       data-student-id="{{ student.id }}"
+                       data-student-dojo="{{ student.dojo_id }}"
+                       data-guest-dojos="{{ guest_dojo_ids|join(',') }}">
+                    <div style="display: flex; align-items: center; gap: 0.7rem;">
+                        <input type="checkbox" name="student_ids" value="{{ student.id }}" style="width: 20px; height: 20px; accent-color: var(--primary); cursor: pointer;">
+                        <span class="student-check-name">
+                            {{ student.name }} 
+                            <small style="color: var(--accent-cyan); font-weight: 600;">({{ student.belt_rank }})</small>
+                            <span class="guest-badge" style="display: none; font-size: 0.7rem; background: rgba(245, 158, 11, 0.2); color: #F59E0B; border: 1px solid rgba(245, 158, 11, 0.4); padding: 2px 6px; border-radius: 4px; font-weight: 600; margin-left: 0.5rem;">
+                                <i class="fa-solid fa-user-check"></i> Convidado
+                            </span>
+                        </span>
+                    </div>
+                    <span class="student-check-dojo"><i class="fa-solid fa-location-dot"></i> {{ student.dojo.name if student.dojo else 'Sem Dojo' }}</span>
+                </label>
+                {% endfor %}
+            </div>
+
+            <button type="submit" class="btn btn-emerald" style="width: 100%; margin-top: 1.2rem; font-size: 1rem; padding: 0.8rem;">
+                <i class="fa-solid fa-check"></i> Salvar Presenças e Concluir Chamada
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL SOLICITAR ALUNO CONVIDADO -->
+<div class="modal-backdrop" id="modal-request-guest">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 style="color: white;"><i class="fa-solid fa-user-check"></i> Solicitar Aluno Convidado Inter-Dojo</h3>
+            <button class="modal-close">&times;</button>
+        </div>
+        <form action="/api/guest-approvals/create" method="POST">
+            <div class="form-group">
+                <label class="form-label">Selecione o Aluno</label>
+                <select name="student_id" class="form-select" required>
+                    {% for student in students %}
+                        <option value="{{ student.id }}">{{ student.name }} (Dojo Atual: {{ student.dojo.name if student.dojo else 'N/A' }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Dojo Visitado (Destino)</label>
+                <select name="target_dojo_id" class="form-select" required>
+                    {% for dojo in dojos %}
+                        <option value="{{ dojo.id }}">{{ dojo.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Motivo / Período (Aula Única ou Recorrente)</label>
+                <textarea name="notes" class="form-input" rows="2" placeholder="Ex: Participação no treino de quinta-feira para preparação de exame."></textarea>
+            </div>
+
+            <p style="font-size: 0.8rem; color: var(--accent-amber);">
+                <i class="fa-solid fa-triangle-exclamation"></i> O Sensei responsável pelo aluno receberá um alerta na dashboard para aprovar ou recusar esta permissão.
+            </p>
+
+            <button type="submit" class="btn btn-amber" style="width: 100%; margin-top: 1rem;">Enviar Solicitação ao Sensei</button>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL NOVO HORÁRIO -->
+<div class="modal-backdrop" id="modal-new-schedule">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 style="color: white;"><i class="fa-solid fa-clock"></i> Criar Horário na Grade</h3>
+            <button class="modal-close">&times;</button>
+        </div>
+        <form action="/api/schedules/create" method="POST">
+            <div class="form-group">
+                <label class="form-label">Dojo</label>
+                <select name="dojo_id" class="form-select" required>
+                    {% for dojo in dojos %}
+                        <option value="{{ dojo.id }}">{{ dojo.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                    <label class="form-label">Dia da Semana</label>
+                    <select name="weekday" class="form-select">
+                        <option value="Segunda">Segunda-feira</option>
+                        <option value="Terça">Terça-feira</option>
+                        <option value="Quarta">Quarta-feira</option>
+                        <option value="Quinta">Quinta-feira</option>
+                        <option value="Sexta">Sexta-feira</option>
+                        <option value="Sábado">Sábado</option>
+                        <option value="Domingo">Domingo</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Título do Treino</label>
+                    <input type="text" name="title" class="form-input" required placeholder="Ex: Aikido Geral">
+                </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                    <label class="form-label">Horário de Início</label>
+                    <input type="text" name="start_time" class="form-input" placeholder="19:30" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Horário de Término</label>
+                    <input type="text" name="end_time" class="form-input" placeholder="21:00" required>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Sensei Instrutor</label>
+                <select name="instructor_sensei_id" class="form-select">
+                    {% for sensei in senseis %}
+                        <option value="{{ sensei.id }}">{{ sensei.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">Adicionar à Grade Semanal</button>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentWeekOffset = 0;
+
+function changeWeek(offset) {
+    currentWeekOffset += offset;
+    
+    // Calcula a data base 20/07/2026
+    let baseStart = new Date(2026, 6, 20); // 6 = Julho
+    let baseEnd = new Date(2026, 6, 26);
+    
+    // Aplica o offset de semanas
+    baseStart.setDate(baseStart.getDate() + (currentWeekOffset * 7));
+    baseEnd.setDate(baseEnd.getDate() + (currentWeekOffset * 7));
+    
+    // Formata
+    const format = (d) => {
+        return d.getDate().toString().padStart(2, '0') + '/' + 
+               (d.getMonth() + 1).toString().padStart(2, '0') + '/' + 
+               d.getFullYear();
+    };
+    
+    document.getElementById('week-dates-span').innerText = `${format(baseStart)} até ${format(baseEnd)}`;
+}
+
+function openSessionModal(scheduleId, title, dojoName, dojoId, attendedUserIds = []) {
+    document.getElementById('modal-schedule-id').value = scheduleId;
+    document.getElementById('modal-session-title').innerHTML = '<i class="fa-solid fa-clipboard-user"></i> Chamada: ' + title + ' (' + dojoName + ')';
+    
+    // Filter checklist: show only students belonging to this Dojo or approved guests
+    const targetDojoStr = String(dojoId);
+    const studentItems = document.querySelectorAll('.student-check-item');
+    let visibleCount = 0;
+
+    studentItems.forEach(item => {
+        const studentId = parseInt(item.getAttribute('data-student-id'));
+        const studentDojo = item.getAttribute('data-student-dojo');
+        const guestDojos = (item.getAttribute('data-guest-dojos') || '').split(',').filter(Boolean);
+        const guestBadge = item.querySelector('.guest-badge');
+        const checkbox = item.querySelector('input[type="checkbox"]');
+
+        const isMember = (studentDojo === targetDojoStr);
+        const isGuest = guestDojos.includes(targetDojoStr);
+        const isAttended = Array.isArray(attendedUserIds) && attendedUserIds.includes(studentId);
+
+        // Pre-check attendance if already registered
+        if (checkbox) {
+            checkbox.checked = isAttended;
+        }
+
+        if (isMember || isGuest || isAttended) {
+            item.style.display = 'flex';
+            visibleCount++;
+            if (guestBadge) {
+                guestBadge.style.display = (isGuest && !isMember) ? 'inline-block' : 'none';
+            }
+        } else {
+            item.style.display = 'none';
+            if (guestBadge) {
+                guestBadge.style.display = 'none';
+            }
+        }
+    });
+
+    // Display message if no students found for this dojo
+    let emptyMsg = document.getElementById('no-students-dojo-msg');
+    const checklistBox = document.getElementById('students-checklist-box');
+
+    if (visibleCount === 0) {
+        if (!emptyMsg && checklistBox) {
+            emptyMsg = document.createElement('div');
+            emptyMsg.id = 'no-students-dojo-msg';
+            emptyMsg.style.cssText = 'text-align: center; color: var(--text-dim); padding: 1.5rem; font-size: 0.85rem; font-style: italic; background: rgba(255,255,255,0.02); border-radius: var(--radius-md); border: 1px dashed var(--border); margin: 0.5rem 0;';
+            emptyMsg.innerHTML = '<i class="fa-solid fa-users-slash" style="margin-right: 6px; color: var(--accent-amber);"></i> Nenhum aluno matriculado ou convidado com presença liberada para este dojo.';
+            checklistBox.appendChild(emptyMsg);
+        }
+        if (emptyMsg) emptyMsg.style.display = 'block';
+    } else if (emptyMsg) {
+        emptyMsg.style.display = 'none';
+    }
+
+    document.getElementById('modal-session').classList.add('active');
+}
+</script>
+{% endblock %}

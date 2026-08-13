@@ -1,4 +1,6 @@
 import os
+import logging
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import RedirectResponse, JSONResponse
@@ -17,10 +19,26 @@ from app.routes.financial import router as financial_router
 
 from app.version import VERSION, get_version_info, SYSTEM_NAME
 
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
+logger = logging.getLogger("dojocho")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    db_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), "rioaiki.db")
+    if not os.path.exists(db_file):
+        logger.info("Database rioaiki.db not found. Initializing and seeding...")
+        init_db()
+        seed_data()
+    else:
+        logger.info("Database rioaiki.db found. Ensuring tables...")
+        Base.metadata.create_all(bind=engine)
+    yield
+
 app = FastAPI(
     title=SYSTEM_NAME,
     version=VERSION,
-    description="Sistema de Gerenciamento de Dojos, Praticantes, Frequência, Graduação e Financeiro do Grupo RioAiki"
+    description="Sistema de Gerenciamento de Dojos, Praticantes, Frequência, Graduação e Financeiro do Grupo RioAiki",
+    lifespan=lifespan
 )
 
 # Anti-"Failed to fetch" Guard: CORS Middleware configuration
@@ -32,9 +50,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Security Headers Middleware
+@app.middleware("http")
+async def security_headers_middleware(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    return response
+
 # Mount Static Files
 static_dir = os.path.join(os.path.dirname(__file__), "static")
-app.mount("/static", StaticFiles(directory=directory_static := static_dir), name="static")
+app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 # Rotas públicas: apenas estas NÃO exigem autenticação (negar por padrão)
 PUBLIC_PATHS = ["/login", "/logout", "/favicon.ico", "/reset-password", "/api/version"]
@@ -112,18 +139,8 @@ async def import_faixa_preta_endpoint():
             status_code=500
         )
 
-@app.on_event("startup")
-def startup_event():
-    db_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), "rioaiki.db")
-    if not os.path.exists(db_file):
-        print("Database rioaiki.db not found. Initializing and seeding...")
-        init_db()
-        seed_data()
-    else:
-        print("Database rioaiki.db found. Ensuring tables...")
-        Base.metadata.create_all(bind=engine)
-
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("app.main:app", host="127.0.0.1", port=8000, reload=True)
+
 

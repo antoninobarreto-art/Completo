@@ -166,7 +166,7 @@ Em todos os formulários com foto (Perfil, Dojo, Eventos e Classificados), o usu
 
 ### 1. Instalação de Dependências
 ```bash
-pip install fastapi uvicorn sqlalchemy jinja2 python-multipart pyjwt passlib bcrypt
+pip install -r requirements.txt
 ```
 
 ### 2. Execução do Servidor em Desenvolvimento

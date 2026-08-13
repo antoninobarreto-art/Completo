@@ -3,6 +3,9 @@ from sqlalchemy import Column, Integer, String, Boolean, Float, DateTime, Foreig
 from sqlalchemy.orm import relationship
 from app.database import Base
 
+def utc_now():
+    return datetime.datetime.now(datetime.timezone.utc)
+
 class Dojo(Base):
     __tablename__ = "dojos"
 
@@ -13,8 +16,8 @@ class Dojo(Base):
     city = Column(String, nullable=False, default="Rio de Janeiro")
     photo_url = Column(String, nullable=True)
     description = Column(Text, nullable=True)
-    responsible_sensei_id = Column(Integer, ForeignKey("users.id"), nullable=True)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    responsible_sensei_id = Column(Integer, ForeignKey("users.id"), index=True, nullable=True)
+    created_at = Column(DateTime, default=utc_now)
 
     # Relationships
     responsible_sensei = relationship("User", foreign_keys=[responsible_sensei_id])
@@ -32,8 +35,8 @@ class User(Base):
     role = Column(String, nullable=False, default="STUDENT")  # ADMIN, SENSEI, STUDENT
     is_sensei = Column(Boolean, default=False)
     belt_rank = Column(String, nullable=False, default="6º Kyu")  # Kyu or Dan
-    dojo_id = Column(Integer, ForeignKey("dojos.id"), nullable=True)
-    supervisor_sensei_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    dojo_id = Column(Integer, ForeignKey("dojos.id"), index=True, nullable=True)
+    supervisor_sensei_id = Column(Integer, ForeignKey("users.id"), index=True, nullable=True)
     
     password_hash = Column(String, nullable=True)
     is_active = Column(Boolean, default=True)
@@ -60,7 +63,7 @@ class User(Base):
     reset_token = Column(String, nullable=True)
     reset_token_expires = Column(DateTime, nullable=True)
 
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    created_at = Column(DateTime, default=utc_now)
 
     # Relationships
     dojo = relationship("Dojo", back_populates="members", foreign_keys=[dojo_id])
@@ -75,8 +78,8 @@ class ClassSchedule(Base):
     __tablename__ = "class_schedules"
 
     id = Column(Integer, primary_key=True, index=True)
-    dojo_id = Column(Integer, ForeignKey("dojos.id"), nullable=False)
-    instructor_sensei_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    dojo_id = Column(Integer, ForeignKey("dojos.id"), index=True, nullable=False)
+    instructor_sensei_id = Column(Integer, ForeignKey("users.id"), index=True, nullable=True)
     weekday = Column(String, nullable=False)  # Segunda, Terça, Quarta, Quinta, Sexta, Sábado, Domingo
     start_time = Column(String, nullable=False)  # HH:MM
     end_time = Column(String, nullable=False)    # HH:MM
@@ -92,14 +95,14 @@ class ClassSession(Base):
     __tablename__ = "class_sessions"
 
     id = Column(Integer, primary_key=True, index=True)
-    schedule_id = Column(Integer, ForeignKey("class_schedules.id"), nullable=True)
-    dojo_id = Column(Integer, ForeignKey("dojos.id"), nullable=False)
+    schedule_id = Column(Integer, ForeignKey("class_schedules.id"), index=True, nullable=True)
+    dojo_id = Column(Integer, ForeignKey("dojos.id"), index=True, nullable=False)
     date = Column(String, nullable=False)  # YYYY-MM-DD
-    instructor_sensei_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    instructor_sensei_id = Column(Integer, ForeignKey("users.id"), index=True, nullable=True)
     notes = Column(Text, nullable=True)
     photo_url = Column(String, nullable=True)      # Foto da aula/treino
     document_url = Column(String, nullable=True)   # Plano de aula / Documento PDF/TXT
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    created_at = Column(DateTime, default=utc_now)
 
     schedule = relationship("ClassSchedule", back_populates="sessions")
     dojo = relationship("Dojo", back_populates="sessions")
@@ -111,11 +114,11 @@ class Attendance(Base):
     __tablename__ = "attendances"
 
     id = Column(Integer, primary_key=True, index=True)
-    session_id = Column(Integer, ForeignKey("class_sessions.id"), nullable=False)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    session_id = Column(Integer, ForeignKey("class_sessions.id"), index=True, nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True, nullable=False)
     is_guest = Column(Boolean, default=False)
     guest_approved = Column(Boolean, default=True)  # If local student -> True, if guest -> requires approval
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    created_at = Column(DateTime, default=utc_now)
 
     session = relationship("ClassSession", back_populates="attendances")
     user = relationship("User", back_populates="attendances")
@@ -125,13 +128,13 @@ class GuestApproval(Base):
     __tablename__ = "guest_approvals"
 
     id = Column(Integer, primary_key=True, index=True)
-    student_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    origin_dojo_id = Column(Integer, ForeignKey("dojos.id"), nullable=False)
-    target_dojo_id = Column(Integer, ForeignKey("dojos.id"), nullable=False)
-    sensei_id = Column(Integer, ForeignKey("users.id"), nullable=False)  # Student's sensei who approves
+    student_id = Column(Integer, ForeignKey("users.id"), index=True, nullable=False)
+    origin_dojo_id = Column(Integer, ForeignKey("dojos.id"), index=True, nullable=False)
+    target_dojo_id = Column(Integer, ForeignKey("dojos.id"), index=True, nullable=False)
+    sensei_id = Column(Integer, ForeignKey("users.id"), index=True, nullable=False)  # Student's sensei who approves
     status = Column(String, default="PENDING")  # PENDING, APPROVED, REJECTED
     notes = Column(Text, nullable=True)
-    requested_at = Column(DateTime, default=datetime.datetime.utcnow)
+    requested_at = Column(DateTime, default=utc_now)
 
     student = relationship("User", foreign_keys=[student_id], back_populates="guest_requests")
     origin_dojo = relationship("Dojo", foreign_keys=[origin_dojo_id])
@@ -143,7 +146,7 @@ class Classified(Base):
     __tablename__ = "classifieds"
 
     id = Column(Integer, primary_key=True, index=True)
-    author_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    author_id = Column(Integer, ForeignKey("users.id"), index=True, nullable=False)
     title = Column(String, nullable=False)
     description = Column(Text, nullable=False)
     category = Column(String, nullable=False)  # Dogi/Kimono, Armas, Mídia, Outros
@@ -151,7 +154,7 @@ class Classified(Base):
     photo_url = Column(String, nullable=True)
     status = Column(String, default="PENDING_SENSEI")  # PENDING_SENSEI, APPROVED, REJECTED
     rejection_reason = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    created_at = Column(DateTime, default=utc_now)
 
     author = relationship("User", back_populates="classifieds")
 
@@ -164,7 +167,7 @@ class Event(Base):
     description = Column(Text, nullable=False)
     date_time = Column(String, nullable=False)  # YYYY-MM-DD HH:MM
     location = Column(String, nullable=False)
-    main_sensei_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    main_sensei_id = Column(Integer, ForeignKey("users.id"), index=True, nullable=True)
     assistant_senseis = Column(String, nullable=True)  # Comma separated names
     photo_url = Column(String, nullable=True)
     price = Column(Float, default=0.0)
@@ -180,8 +183,8 @@ class EventPresence(Base):
     __tablename__ = "event_presences"
 
     id = Column(Integer, primary_key=True, index=True)
-    event_id = Column(Integer, ForeignKey("events.id"), nullable=False)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    event_id = Column(Integer, ForeignKey("events.id"), index=True, nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True, nullable=False)
     status = Column(String, default="CONFIRMED")  # CONFIRMED, PENDING
 
     event = relationship("Event", back_populates="presences")
@@ -192,12 +195,12 @@ class EventTask(Base):
     __tablename__ = "event_tasks"
 
     id = Column(Integer, primary_key=True, index=True)
-    event_id = Column(Integer, ForeignKey("events.id"), nullable=False)
-    assigned_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    event_id = Column(Integer, ForeignKey("events.id"), index=True, nullable=False)
+    assigned_user_id = Column(Integer, ForeignKey("users.id"), index=True, nullable=True)
     description = Column(String, nullable=False)
     due_date = Column(String, nullable=True)  # Data e hora de realização
     is_completed = Column(Boolean, default=False)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    created_at = Column(DateTime, default=utc_now)
 
     event = relationship("Event", back_populates="tasks")
     assigned_user = relationship("User", foreign_keys=[assigned_user_id])
@@ -207,13 +210,13 @@ class EventExternalParticipant(Base):
     __tablename__ = "event_external_participants"
 
     id = Column(Integer, primary_key=True, index=True)
-    event_id = Column(Integer, ForeignKey("events.id"), nullable=False)
+    event_id = Column(Integer, ForeignKey("events.id"), index=True, nullable=False)
     name = Column(String, nullable=False)
     dojo = Column(String, nullable=True)
     association = Column(String, nullable=True)
     belt_rank = Column(String, nullable=True)
     is_present = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    created_at = Column(DateTime, default=utc_now)
 
     event = relationship("Event", back_populates="external_participants")
 
@@ -227,17 +230,18 @@ class FinancialTransaction(Base):
     type = Column(String, nullable=False, default="RECEITA")  # RECEITA, DESPESA
     category = Column(String, nullable=False, default="Mensalidade")  # Mensalidade, Exame de Faixa, Aluguel Tatame, Equipamentos, Eventos, Outros
     
-    dojo_id = Column(Integer, ForeignKey("dojos.id"), nullable=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    dojo_id = Column(Integer, ForeignKey("dojos.id"), index=True, nullable=True)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True, nullable=True)
     
     due_date = Column(String, nullable=False)        # YYYY-MM-DD
     payment_date = Column(String, nullable=True)     # YYYY-MM-DD
     status = Column(String, default="PENDING")       # PAID, PENDING, OVERDUE
     payment_method = Column(String, nullable=True)   # PIX, Cartão, Boleto, Dinheiro, Transferência
     notes = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    created_at = Column(DateTime, default=utc_now)
 
     # Relationships
     dojo = relationship("Dojo", foreign_keys=[dojo_id])
     user = relationship("User", foreign_keys=[user_id])
+
 

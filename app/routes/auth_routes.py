@@ -1,4 +1,4 @@
-import os, datetime, secrets
+import os, datetime, secrets, logging
 from fastapi import APIRouter, Request, Depends, Form, HTTPException, Response
 from fastapi.responses import RedirectResponse, HTMLResponse
 from fastapi.templating import Jinja2Templates
@@ -9,6 +9,7 @@ from app.models import User
 from app.security.auth import verify_password, create_access_token, hash_password, decode_access_token
 from app.security.rate_limiter import login_rate_limiter
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 templates = Jinja2Templates(directory=os.path.join(os.path.dirname(os.path.dirname(__file__)), "templates"))
 
@@ -108,15 +109,13 @@ def forgot_password(
         # Gera Token Único e Expiração de 1 hora
         token = secrets.token_urlsafe(32)
         user.reset_token = token
-        user.reset_token_expires = datetime.datetime.utcnow() + datetime.timedelta(hours=1)
+        user.reset_token_expires = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=1)
         db.commit()
 
         reset_link = f"{request.base_url}reset-password?token={token}"
         # TODO(P2): substituir por envio real de e-mail (SMTP transacional).
         # O link NUNCA deve ser exibido na tela (risco de sequestro de conta).
-        print(f"\n[E-MAIL SIMULADO DE RECUPERAÇÃO DE SENHA]")
-        print(f"Para: {user.email}")
-        print(f"Link de Redefinição: {reset_link}\n")
+        logger.info(f"[E-MAIL SIMULADO DE RECUPERAÇÃO DE SENHA] Para: {user.email} | Link: {reset_link}")
 
     return templates.TemplateResponse(
         request=request,

@@ -1426,11 +1426,17 @@ body.light-theme input[type="date"]::-webkit-calendar-picker-indicator {
    MOBILE RESPONSIVE & BOTTOM NAVIGATION STYLES (< 768px)
    ========================================================================== */
 
-.mobile-bottom-nav, .mobile-theme-header-btn {
+.mobile-bottom-nav, .mobile-theme-header-btn, .mobile-logout-header-btn, .mobile-header-actions {
   display: none;
 }
 
 @media (max-width: 768px) {
+  .mobile-header-actions {
+    display: flex !important;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
   .mobile-theme-header-btn {
     display: flex !important;
     align-items: center;
@@ -1450,6 +1456,37 @@ body.light-theme input[type="date"]::-webkit-calendar-picker-indicator {
   .mobile-theme-header-btn:hover {
     color: #FFFFFF;
     background: rgba(255, 255, 255, 0.18);
+  }
+
+  .mobile-logout-header-btn {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: rgba(244, 63, 94, 0.12);
+    border: 1px solid rgba(244, 63, 94, 0.35);
+    color: var(--accent-rose);
+    font-size: 0.95rem;
+    text-decoration: none;
+    cursor: pointer;
+    transition: var(--transition);
+    outline: none;
+  }
+
+  .mobile-logout-header-btn:hover {
+    background: rgba(244, 63, 94, 0.25);
+    color: #FFFFFF;
+    border-color: var(--accent-rose);
+  }
+
+  .mobile-logout-item {
+    color: var(--accent-rose) !important;
+  }
+
+  .mobile-logout-item:hover {
+    color: #FFFFFF !important;
   }
   /* Layout Spacing */
   body {
@@ -1564,3 +1601,38 @@ body.light-theme input[type="date"]::-webkit-calendar-picker-indicator {
   color: #000000 !important;
   font-weight: 700 !important;
 }
+
+/* LIGHT THEME OVERRIDES FOR MOBILE BOTTOM NAV & FOOTER */
+body.light-theme .mobile-bottom-nav {
+  background: rgba(255, 255, 255, 0.96) !important;
+  border-top: 1px solid rgba(0, 0, 0, 0.1) !important;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.08) !important;
+}
+
+body.light-theme .mobile-nav-item {
+  color: #4b5563 !important;
+}
+
+body.light-theme .mobile-nav-item:hover,
+body.light-theme .mobile-nav-item.active {
+  color: #0284c7 !important;
+}
+
+body.light-theme .mobile-nav-item.active i {
+  color: #0284c7 !important;
+}
+
+body.light-theme .mobile-logout-item {
+  color: #e11d48 !important;
+}
+
+body.light-theme .mobile-logout-item:hover {
+  color: #be123c !important;
+}
+
+body.light-theme .footer {
+  background: #f8fafc !important;
+  border-top: 1px solid #e2e8f0 !important;
+  color: #64748b !important;
+}
+

@@ -1,6 +1,5 @@
-import functools
-from typing import List, Union, Callable
-from fastapi import Request, HTTPException, status, Depends
+from typing import List, Union
+from fastapi import Request, HTTPException, status
 from app.security.auth import decode_access_token
 
 def get_current_user_from_request(request: Request) -> dict:
@@ -35,14 +34,7 @@ def get_current_user_from_request(request: Request) -> dict:
 
 def requer_permissao(permissoes_requeridas: Union[str, List[str]]):
     """
-    Decorator / Dependency Plugável de RBAC/IAM.
-    Pode ser usado diretamente como Decorator em funções Python legadas
-    ou como Depends(requer_permissao('ADMIN')) em rotas do FastAPI.
-
-    Uso Decorator:
-        @requer_permissao('admin')
-        def acao_sensivel(usuario, ...):
-            ...
+    Dependency Plugável de RBAC/IAM para rotas FastAPI.
 
     Uso FastAPI:
         @router.post("/rota")
@@ -75,41 +67,5 @@ def requer_permissao(permissoes_requeridas: Union[str, List[str]]):
 
         return user
 
-    def decorator(func: Callable):
-        @functools.wraps(func)
-        def wrapper(*args, **kwargs):
-            # Extrai objeto request ou user dos argumentos se for função direta
-            user = kwargs.get('current_user') or kwargs.get('user')
-            if not user:
-                # Procura por request nos args
-                for arg in args:
-                    if isinstance(arg, Request):
-                        user = get_current_user_from_request(arg)
-                        break
-
-            if not user:
-                raise HTTPException(status_code=401, detail="Usuário não autenticado.")
-
-            user_role = str(user.get("role", "")).upper()
-            user_permissions = [p.upper() for p in user.get("permissions", [])]
-
-            tem_acesso = (
-                user_role in permissoes_requeridas or 
-                any(p in user_permissions for p in permissoes_requeridas) or
-                user_role == "ADMIN"
-            )
-
-            if not tem_acesso:
-                raise HTTPException(status_code=403, detail="Acesso negado por falta de privilégios.")
-
-            return func(*args, **kwargs)
-        return wrapper
-
-    # Permite funcionar tanto como FastAPI Dependency quanto como Decorator tradicional
-    class FastAPIDependencyDecorator:
-        def __call__(self, func_or_request):
-            if isinstance(func_or_request, Request):
-                return dependency(func_or_request)
-            return decorator(func_or_request)
-
     return dependency
+

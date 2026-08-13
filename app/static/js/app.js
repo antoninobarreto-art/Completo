@@ -1,7 +1,6 @@
 // RioAiki Application Interactive Javascript
 
 document.addEventListener('DOMContentLoaded', () => {
-    initReloadLogout();
     initThemeToggle();
     initFilters();
     initModals();
@@ -295,25 +294,6 @@ function switchManagementTab(tabName) {
     if (activeTabBtn) activeTabBtn.classList.add('active');
 }
 
-// Auto Logout on Page Reload / F5 / Ctrl+R / Cmd+R
-function initReloadLogout() {
-    if (window.location.pathname === '/login') return;
-
-    // Check if page was reloaded (F5, Ctrl+R, or Refresh button)
-    const navEntries = performance.getEntriesByType('navigation');
-    if (navEntries.length > 0 && navEntries[0].type === 'reload') {
-        window.location.href = '/logout';
-        return;
-    }
-
-    // Intercept keyboard shortcuts for Refresh (F5, Ctrl+R, Cmd+R)
-    window.addEventListener('keydown', (e) => {
-        if (e.key === 'F5' || (e.ctrlKey && (e.key === 'r' || e.key === 'R')) || (e.metaKey && (e.key === 'r' || e.key === 'R'))) {
-            e.preventDefault();
-            window.location.href = '/logout';
-        }
-    });
-}
 
 // Password Visibility Toggle
 function togglePasswordVisibility(inputId, iconId) {

@@ -5,6 +5,22 @@ Todas as alterações notáveis neste projeto serão documentadas neste arquivo.
 O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/),
 e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
+## [2.3.0] - 2026-08-13
+
+### Adicionado
+- **Botão de Sair na Interface Mobile**: Botão de logout (`/logout`) integrado no topo do cabeçalho móvel e como aba fixa na barra inferior de navegação.
+- **Suporte a Tema Claro no Menu Inferior e Rodapé Mobile**: Estilização Glassmorphic clara, bordas e contraste de ícones adaptados para Tema Claro em smartphones.
+- **Headers de Segurança HTTP**: Middleware global adicionando `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY` e `Referrer-Policy`.
+
+### Alterado / Refatorado
+- **Integridade Referencial SQLite**: Adicionada execução automática de `PRAGMA foreign_keys=ON` em todas as conexões SQLAlchemy.
+- **Indexação de Banco de Dados**: Adicionado `index=True` em todas as colunas de chave estrangeira (`ForeignKey`) do ORM para otimização de consultas.
+- **Migração do Ciclo de Vida FastAPI**: Atualizada a inicialização do app para o padrão moderno `lifespan` com `@asynccontextmanager`.
+- **Padronização de Logging & Timezone**: Substituído o uso de `print()` por `logging` estruturado e migrado `datetime.utcnow()` para `datetime.now(timezone.utc)`.
+- **Remoção de Logout no Refresh**: Removida a rotina `initReloadLogout()` no frontend para evitar encerramento de sessão em atualizações de página (F5 / Ctrl+R).
+
+---
+
 ## [2.2.1] - 2026-08-13
 
 ### Adicionado

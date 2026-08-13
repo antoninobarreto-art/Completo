@@ -1,7 +1,10 @@
+import logging
 from app.database import engine, Base, SessionLocal
 from app.models import Dojo, User, ClassSchedule, ClassSession, Attendance, GuestApproval, Classified, Event, EventPresence, FinancialTransaction
 from app.security.auth import hash_password
 import datetime
+
+logger = logging.getLogger(__name__)
 
 def init_db():
     Base.metadata.drop_all(bind=engine)
@@ -557,7 +560,7 @@ def seed_data():
     db.commit()
 
     db.close()
-    print("Database RioAiki populated successfully with initial seed data!")
+    logger.info("Database RioAiki populated successfully with initial seed data!")
 
 if __name__ == "__main__":
     init_db()

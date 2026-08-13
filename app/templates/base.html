@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}🥋 DOJOCHO - RioAiki Gestão de Dojos{% endblock %}</title>
     <!-- Fonts & Style -->
-    <link rel="stylesheet" href="/static/css/style.css?v=2.2.0">
+    <link rel="stylesheet" href="/static/css/style.css?v=2.2.3">
     <!-- FontAwesome icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
@@ -22,10 +22,17 @@
                 </div>
             </a>
 
-            <!-- MOBILE TOP THEME TOGGLE BUTTON -->
-            <button id="mobile-header-theme-toggle" class="mobile-theme-header-btn" title="Alternar Tema Claro/Escuro" aria-label="Alternar Tema">
-                <i class="fa-solid fa-moon" id="mobile-header-theme-icon"></i>
-            </button>
+            <!-- MOBILE TOP HEADER ACTIONS -->
+            <div class="mobile-header-actions">
+                <button id="mobile-header-theme-toggle" class="mobile-theme-header-btn" title="Alternar Tema Claro/Escuro" aria-label="Alternar Tema">
+                    <i class="fa-solid fa-moon" id="mobile-header-theme-icon"></i>
+                </button>
+                {% if current_user %}
+                <a href="/logout" class="mobile-logout-header-btn" title="Sair da Conta ({{ current_user.name }})" aria-label="Sair da Conta">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                </a>
+                {% endif %}
+            </div>
 
             <ul class="nav-links">
                 <li>
@@ -145,6 +152,12 @@
             <i class="fa-solid fa-moon" id="mobile-theme-icon"></i>
             <span>Tema</span>
         </button>
+        {% if current_user %}
+        <a href="/logout" class="mobile-nav-item mobile-logout-item" title="Sair da Conta">
+            <i class="fa-solid fa-right-from-bracket"></i>
+            <span>Sair</span>
+        </a>
+        {% endif %}
     </nav>
 
     <!-- FOOTER -->

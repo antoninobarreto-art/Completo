@@ -15,7 +15,13 @@ from app.routes.classifieds import router as classifieds_router
 from app.routes.events import router as events_router
 from app.routes.financial import router as financial_router
 
-app = FastAPI(title="RioAiki DOJOCHO - Sistema de Gerenciamento de Dojos de Aikido")
+from app.version import VERSION, get_version_info, SYSTEM_NAME
+
+app = FastAPI(
+    title=SYSTEM_NAME,
+    version=VERSION,
+    description="Sistema de Gerenciamento de Dojos, Praticantes, Frequência, Graduação e Financeiro do Grupo RioAiki"
+)
 
 # Anti-"Failed to fetch" Guard: CORS Middleware configuration
 app.add_middleware(
@@ -28,11 +34,11 @@ app.add_middleware(
 
 # Mount Static Files
 static_dir = os.path.join(os.path.dirname(__file__), "static")
-app.mount("/static", StaticFiles(directory=static_dir), name="static")
+app.mount("/static", StaticFiles(directory=directory_static := static_dir), name="static")
 
 # Rotas públicas: apenas estas NÃO exigem autenticação (negar por padrão)
-PUBLIC_PATHS = ["/login", "/logout", "/favicon.ico", "/reset-password"]
-PUBLIC_PREFIXES = ("/static", "/api/forgot-password", "/api/reset-password", "/api/import/faixa-preta")
+PUBLIC_PATHS = ["/login", "/logout", "/favicon.ico", "/reset-password", "/api/version"]
+PUBLIC_PREFIXES = ("/static", "/api/forgot-password", "/api/reset-password", "/api/import/faixa-preta", "/api/version")
 
 # Middleware Global de Autenticação
 @app.middleware("http")
@@ -72,6 +78,13 @@ app.include_router(schedule_router)
 app.include_router(classifieds_router)
 app.include_router(events_router)
 app.include_router(financial_router)
+
+@app.get("/api/version", tags=["Sistema"])
+async def get_system_version():
+    """
+    Retorna as informações completas da versão atual do DOJOCHO.
+    """
+    return JSONResponse(content=get_version_info(), status_code=200)
 
 @app.post("/api/import/faixa-preta")
 @app.get("/api/import/faixa-preta")

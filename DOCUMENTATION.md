@@ -1,7 +1,7 @@
 # 🥋 DOJOCHO - Documentação Técnica Completa do Sistema
 
-**Sistema de Gerenciamento de Dojos, Praticantes, Aulas e Eventos de Aikido**  
-**Versão**: 2.0 | **Data**: Julho / 2026 | **Licença**: Proprietária - Grupo RioAiki
+**Sistema de Gerenciamento de Dojos, Praticantes, Aulas, Eventos e Financeiro de Aikido**  
+**Versão**: 2.1.0 | **Data**: Agosto / 2026 | **Licença**: Proprietária - Grupo RioAiki
 
 ---
 

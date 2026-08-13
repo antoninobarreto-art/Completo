@@ -2,12 +2,12 @@
 DOJOCHO - Módulo de Controle de Versão e Informações de Release
 """
 
-VERSION = "2.1.0"
+VERSION = "2.2.1"
 RELEASE_DATE = "2026-08-13"
-RELEASE_NAME = "Módulo Financeiro & Gestão de Faixas Pretas"
+RELEASE_NAME = "Mobile UX, Botão de Tema & Correções Visuais"
 SYSTEM_NAME = "DOJOCHO - Sistema de Gerenciamento de Dojos de Aikido"
 ORGANIZATION = "Grupo RioAiki"
-MIN_DB_VERSION = "2.1.0"
+MIN_DB_VERSION = "2.2.1"
 
 def get_version_info() -> dict:
     return {

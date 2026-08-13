@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}🥋 DOJOCHO - RioAiki Gestão de Dojos{% endblock %}</title>
     <!-- Fonts & Style -->
-    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/style.css?v=2.2.0">
     <!-- FontAwesome icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
@@ -21,6 +21,11 @@
                     <div class="logo-sub">Gestão de Dojos</div>
                 </div>
             </a>
+
+            <!-- MOBILE TOP THEME TOGGLE BUTTON -->
+            <button id="mobile-header-theme-toggle" class="mobile-theme-header-btn" title="Alternar Tema Claro/Escuro" aria-label="Alternar Tema">
+                <i class="fa-solid fa-moon" id="mobile-header-theme-icon"></i>
+            </button>
 
             <ul class="nav-links">
                 <li>
@@ -100,20 +105,62 @@
         {% block content %}{% endblock %}
     </main>
 
+    <!-- MOBILE BOTTOM NAVIGATION BAR -->
+    <nav class="mobile-bottom-nav">
+        <a href="/" class="mobile-nav-item {% if active_page == 'dashboard' %}active{% endif %}">
+            <i class="fa-solid fa-chart-pie"></i>
+            <span>Geral</span>
+            {% if pending_guests_count or pending_classifieds_count %}
+                <span class="mobile-badge">{{ pending_guests_count + pending_classifieds_count }}</span>
+            {% endif %}
+        </a>
+        {% if current_user and current_user.role in ['ADMIN', 'SENSEI'] %}
+        <a href="/management" class="mobile-nav-item {% if active_page == 'management' %}active{% endif %}">
+            <i class="fa-solid fa-users-gear"></i>
+            <span>Dojos</span>
+        </a>
+        <a href="/schedule" class="mobile-nav-item {% if active_page == 'schedule' %}active{% endif %}">
+            <i class="fa-solid fa-calendar-days"></i>
+            <span>Aulas</span>
+        </a>
+        <a href="/financial" class="mobile-nav-item {% if active_page == 'financial' %}active{% endif %}">
+            <i class="fa-solid fa-wallet"></i>
+            <span>Financeiro</span>
+        </a>
+        {% elif current_user and current_user.role == 'STUDENT' %}
+        <a href="/financial/my-tuition" class="mobile-nav-item {% if active_page == 'financial' %}active{% endif %}">
+            <i class="fa-solid fa-wallet"></i>
+            <span>Mensalidade</span>
+        </a>
+        {% endif %}
+        <a href="/events" class="mobile-nav-item {% if active_page == 'events' %}active{% endif %}">
+            <i class="fa-solid fa-bullhorn"></i>
+            <span>Eventos</span>
+        </a>
+        <a href="/classifieds" class="mobile-nav-item {% if active_page == 'classifieds' %}active{% endif %}">
+            <i class="fa-solid fa-store"></i>
+            <span>Mural</span>
+        </a>
+        <button id="mobile-theme-toggle" class="mobile-nav-item" style="background: none; border: none; font-family: inherit; cursor: pointer;" title="Alternar Tema Claro/Escuro">
+            <i class="fa-solid fa-moon" id="mobile-theme-icon"></i>
+            <span>Tema</span>
+        </button>
+    </nav>
+
     <!-- FOOTER -->
     <footer class="footer">
         <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; max-width: 1400px; margin: 0 auto; padding: 0 1rem;">
             <div>&copy; 2026 RioAiki DOJOCHO - Sistema de Gerenciamento de Dojos de Aikido. Conformidade LGPD Garantida.</div>
             <div>
                 <span class="badge" style="background: rgba(6, 182, 212, 0.15); border: 1px solid var(--accent-cyan); color: var(--accent-cyan); font-size: 0.75rem; padding: 0.2rem 0.6rem; border-radius: 12px; font-weight: 600;">
-                    v2.1.0
+                    v2.2.1
                 </span>
             </div>
         </div>
     </footer>
 
     <!-- APP SCRIPT -->
-    <script src="/static/js/app.js"></script>
+    <script src="/static/js/app.js?v=2.2.0"></script>
     {% block scripts %}{% endblock %}
 </body>
 </html>

@@ -1421,3 +1421,146 @@ body.light-theme input[type="date"] {
 body.light-theme input[type="date"]::-webkit-calendar-picker-indicator {
   filter: none !important;
 }
+
+/* ==========================================================================
+   MOBILE RESPONSIVE & BOTTOM NAVIGATION STYLES (< 768px)
+   ========================================================================== */
+
+.mobile-bottom-nav, .mobile-theme-header-btn {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .mobile-theme-header-btn {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--border-color);
+    color: var(--text-muted);
+    font-size: 1rem;
+    cursor: pointer;
+    transition: var(--transition);
+    outline: none;
+  }
+
+  .mobile-theme-header-btn:hover {
+    color: #FFFFFF;
+    background: rgba(255, 255, 255, 0.18);
+  }
+  /* Layout Spacing */
+  body {
+    padding-bottom: 75px; /* Espaço para a barra inferior fixa */
+  }
+
+  .main-container {
+    padding: 1rem 0.75rem !important;
+  }
+
+  /* Desktop Navbar Simplification on Mobile */
+  .navbar-container {
+    padding: 0.6rem 1rem !important;
+  }
+
+  .nav-links {
+    display: none !important; /* Oculta menu horizontal no mobile */
+  }
+
+  /* Bottom Navigation Bar display */
+  .mobile-bottom-nav {
+    display: flex !important;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 65px;
+    background: rgba(17, 24, 39, 0.95);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-top: 1px solid var(--border-color);
+    z-index: 1000;
+    justify-content: space-around;
+    align-items: center;
+    padding: 0.25rem 0.5rem;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.4);
+  }
+
+  .mobile-nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-decoration: none;
+    gap: 3px;
+    position: relative;
+    width: 20%;
+    padding: 0.3rem 0;
+    border-radius: var(--radius-sm);
+    transition: var(--transition);
+  }
+
+  .mobile-nav-item i {
+    font-size: 1.15rem;
+  }
+
+  .mobile-nav-item:hover, .mobile-nav-item.active {
+    color: var(--accent-cyan);
+  }
+
+  .mobile-nav-item.active i {
+    color: var(--primary);
+    transform: translateY(-2px);
+  }
+
+  .mobile-badge {
+    position: absolute;
+    top: 2px;
+    right: 18%;
+    background: var(--accent-rose);
+    color: white;
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 1px 5px;
+    border-radius: var(--radius-full);
+  }
+
+  /* Grids adaptação de 1 coluna no celular */
+  .grid-cols-2, .grid-cols-3, .grid-cols-4, .grid-cols-5 {
+    grid-template-columns: 1fr !important;
+    gap: 1rem !important;
+  }
+
+  /* Modais touch-friendly */
+  .modal-content {
+    width: 95% !important;
+    max-height: 90vh !important;
+    margin: 1rem auto !important;
+    border-radius: var(--radius-md) !important;
+  }
+
+  /* Touch inputs ergonomia */
+  .btn, input, select, textarea {
+    min-height: 44px;
+    font-size: 0.95rem !important;
+  }
+
+  /* Manter cores fiéis de faixas na tabela de graduações no mobile */
+  .badge-belt-yellow, span.badge-belt-yellow {
+    background: #FFDA55 !important;
+    color: #000000 !important;
+    border: none !important;
+  }
+}
+
+/* BELT BADGE COLOR SPECIFIC OVERRIDES */
+.badge-belt-yellow {
+  background: #FFDA55 !important;
+  color: #000000 !important;
+  font-weight: 700 !important;
+}

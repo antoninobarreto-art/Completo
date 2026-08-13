@@ -5,6 +5,27 @@ Todas as alterações notáveis neste projeto serão documentadas neste arquivo.
 O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/),
 e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
+## [2.2.1] - 2026-08-13
+
+### Adicionado
+- **Botão de Alternância de Tema Mobile**: Inserida a funcionalidade de alternância de Tema Claro/Escuro diretamente na Barra Inferior Mobile e no cabeçalho.
+
+### Corrigido
+- **Fidelidade Visual das Cores de Faixas**: Ajustado o estilo do botão da Faixa Amarela (`5º Kyu`) na tabela de graduações com `!important` e sobreposição de especificidade CSS no mobile.
+- **Cache-Busting de Recursos Estáticos**: Inseridos parâmetros `?v=2.2.0` / `?v=2.2.1` no `style.css` e `app.js` para garantir atualização imediata nos navegadores móveis.
+
+---
+
+## [2.2.0] - 2026-08-13
+
+### Adicionado
+- **Navegação Responsiva Mobile (Bottom Bar)**: Barra inferior de acesso rápido com 5 abas principais para dispositivos móveis (`< 768px`).
+- **Suporte Multi-Dispositivo Touch-First**: Reestruturação das tabelas para cards empilhados e ergonomia touch para botões/modais em smartphones e tablets.
+- **Arquivos de Implantação GCP Cloud**: Criação do serviço `dojocho.service` (systemd) e guia de deployment `gcp_deploy_guide.md` para Máquina Virtual no Google Cloud Platform.
+
+### Alterado
+- **Atualização de Versão Centralizada**: Versão alterada de `2.1.0` para `2.2.0` no `version.py`, API `GET /api/version` e footer da UI.
+
 ---
 
 ## [2.1.0] - 2026-08-13

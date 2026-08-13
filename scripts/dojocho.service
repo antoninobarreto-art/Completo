@@ -1,0 +1,14 @@
+[unit]
+Description=DOJOCHO - Sistema de Gerenciamento de Dojos de Aikido
+After=network.target
+
+[Service]
+User=ubuntu
+WorkingDirectory=/opt/dojocho/Completo
+ExecStart=/opt/dojocho/Completo/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4
+Restart=always
+RestartSec=5
+Environment="PORT=8000"
+
+[Install]
+WantedBy=multi-user.target

@@ -7,30 +7,34 @@ document.addEventListener('DOMContentLoaded', () => {
     initModals();
 });
 
-// Theme Toggle Functionality (Claro / Escuro com persistência localStorage)
+// Theme Toggle Functionality (Claro / Escuro com persistência localStorage para Desktop e Mobile)
 function initThemeToggle() {
-    const toggleBtn = document.getElementById('theme-toggle');
-    const icon = document.getElementById('theme-icon');
+    const toggleBtns = document.querySelectorAll('#theme-toggle, #mobile-theme-toggle, #mobile-header-theme-toggle');
+    const icons = document.querySelectorAll('#theme-icon, #mobile-theme-icon, #mobile-header-theme-icon');
     
     // Read saved theme or default to dark
     const savedTheme = localStorage.getItem('rioaiki_theme') || 'dark';
-    if (savedTheme === 'light') {
-        document.body.classList.add('light-theme');
-        if (icon) icon.className = 'fa-solid fa-sun';
-    } else {
-        if (icon) icon.className = 'fa-solid fa-moon';
-    }
-
-    if (toggleBtn) {
-        toggleBtn.addEventListener('click', () => {
-            document.body.classList.toggle('light-theme');
-            const isLight = document.body.classList.contains('light-theme');
-            localStorage.setItem('rioaiki_theme', isLight ? 'light' : 'dark');
-            if (icon) {
-                icon.className = isLight ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
-            }
+    const applyTheme = (isLight) => {
+        if (isLight) {
+            document.body.classList.add('light-theme');
+        } else {
+            document.body.classList.remove('light-theme');
+        }
+        icons.forEach(icon => {
+            icon.className = isLight ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
         });
-    }
+    };
+
+    applyTheme(savedTheme === 'light');
+
+    toggleBtns.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const isLight = !document.body.classList.contains('light-theme');
+            localStorage.setItem('rioaiki_theme', isLight ? 'light' : 'dark');
+            applyTheme(isLight);
+        });
+    });
 }
 
 // Generic Modal Handling

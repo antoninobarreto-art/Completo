@@ -7,10 +7,12 @@ import datetime
 from app.database import get_db
 from app.models import FinancialTransaction, Dojo, User, GuestApproval, Classified
 from app.utils import format_date_br
+from app.version import VERSION
 
 router = APIRouter()
 templates = Jinja2Templates(directory=os.path.join(os.path.dirname(os.path.dirname(__file__)), "templates"))
 templates.env.filters["date_br"] = format_date_br
+templates.env.globals["system_version"] = VERSION
 
 @router.get("/financial")
 @router.get("/financial/students")

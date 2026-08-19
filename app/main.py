@@ -1,11 +1,12 @@
 import os
 import logging
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Depends
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import RedirectResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from app.database import engine, Base
+from sqlalchemy.orm import Session
+from app.database import engine, Base, get_db
 from app.seed import init_db, seed_data
 from app.security.auth import decode_access_token
 
@@ -17,13 +18,14 @@ from app.routes.classifieds import router as classifieds_router
 from app.routes.events import router as events_router
 from app.routes.financial import router as financial_router
 
-from app.version import VERSION, get_version_info, SYSTEM_NAME
+from app.version import VERSION, get_version_info, validate_db_schema_version, SYSTEM_NAME
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger("dojocho")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    logger.info(f"Iniciando {SYSTEM_NAME} - Versão: v{VERSION}")
     db_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), "rioaiki.db")
     if not os.path.exists(db_file):
         logger.info("Database rioaiki.db not found. Initializing and seeding...")
@@ -107,11 +109,13 @@ app.include_router(events_router)
 app.include_router(financial_router)
 
 @app.get("/api/version", tags=["Sistema"])
-async def get_system_version():
+async def get_system_version(db: Session = Depends(get_db)):
     """
-    Retorna as informações completas da versão atual do DOJOCHO.
+    Retorna as informações completas da versão atual do DOJOCHO e integridade do banco.
     """
-    return JSONResponse(content=get_version_info(), status_code=200)
+    info = get_version_info()
+    info["db_status"] = validate_db_schema_version(db)
+    return JSONResponse(content=info, status_code=200)
 
 @app.post("/api/import/faixa-preta")
 @app.get("/api/import/faixa-preta")

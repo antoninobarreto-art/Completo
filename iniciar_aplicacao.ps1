@@ -15,6 +15,10 @@ if (Test-Path ".\.venv\Scripts\Activate.ps1") {
     .\venv\Scripts\Activate.ps1
 }
 
+$sys_ver = python -c "from app.version import VERSION; print(VERSION)" 2>$null
+if ($sys_ver) {
+    Write-Host "[INFO] Versão do Sistema: v$sys_ver" -ForegroundColor Green
+}
 Write-Host "[INFO] Iniciando servidor Uvicorn em http://localhost:8000..." -ForegroundColor Green
 Write-Host ""
 

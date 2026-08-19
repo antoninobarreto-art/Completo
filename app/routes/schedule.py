@@ -9,10 +9,12 @@ import uuid
 from app.database import get_db
 from app.models import Dojo, User, ClassSchedule, ClassSession, Attendance, GuestApproval, Classified
 from app.utils import format_date_br, validate_image_upload, validate_doc_upload, get_required_attendances
+from app.version import VERSION
 
 router = APIRouter()
 templates = Jinja2Templates(directory=os.path.join(os.path.dirname(os.path.dirname(__file__)), "templates"))
 templates.env.filters["date_br"] = format_date_br
+templates.env.globals["system_version"] = VERSION
 
 # Boas Práticas de Mercado para Limites de Upload
 MAX_IMAGE_SIZE = 5 * 1024 * 1024   # 5 MB para imagens (JPG, PNG, WEBP)

@@ -8,10 +8,12 @@ from app.database import get_db
 from app.models import User
 from app.security.auth import verify_password, create_access_token, hash_password, decode_access_token
 from app.security.rate_limiter import login_rate_limiter
+from app.version import VERSION
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 templates = Jinja2Templates(directory=os.path.join(os.path.dirname(os.path.dirname(__file__)), "templates"))
+templates.env.globals["system_version"] = VERSION
 
 @router.get("/login", response_class=HTMLResponse)
 def login_page(request: Request, msg: str = None, error: str = None):

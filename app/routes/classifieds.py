@@ -7,9 +7,11 @@ import uuid
 from app.database import get_db
 from app.models import Classified, User, GuestApproval
 from app.utils import validate_image_upload, decode_and_validate_image
+from app.version import VERSION
 
 router = APIRouter()
 templates = Jinja2Templates(directory=os.path.join(os.path.dirname(os.path.dirname(__file__)), "templates"))
+templates.env.globals["system_version"] = VERSION
 
 MAX_IMAGE_SIZE = 5 * 1024 * 1024
 

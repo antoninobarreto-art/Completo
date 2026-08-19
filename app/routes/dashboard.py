@@ -9,10 +9,12 @@ from app.database import get_db
 from app.models import Dojo, User, GuestApproval, Classified, Event
 
 from app.utils import get_required_attendances
+from app.version import VERSION
 
 router = APIRouter()
 templates = Jinja2Templates(directory=os.path.join(os.path.dirname(os.path.dirname(__file__)), "templates"))
 templates.env.filters["req_attendances"] = get_required_attendances
+templates.env.globals["system_version"] = VERSION
 
 @router.get("/")
 def dashboard_page(request: Request, db: Session = Depends(get_db)):

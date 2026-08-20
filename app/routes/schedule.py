@@ -20,6 +20,8 @@ templates.env.globals["system_version"] = VERSION
 MAX_IMAGE_SIZE = 5 * 1024 * 1024   # 5 MB para imagens (JPG, PNG, WEBP)
 MAX_DOC_SIZE = 10 * 1024 * 1024    # 10 MB para documentos (PDF, TXT, DOCX)
 
+from sqlalchemy import or_
+
 @router.get("/schedule")
 def schedule_page(request: Request, db: Session = Depends(get_db)):
     current_user = getattr(request.state, "user", None)
@@ -28,7 +30,7 @@ def schedule_page(request: Request, db: Session = Depends(get_db)):
     dojos = db.query(Dojo).all()
     schedules = db.query(ClassSchedule).all()
     sessions = db.query(ClassSession).order_by(ClassSession.id.desc()).all()
-    senseis = db.query(User).filter(User.role == "SENSEI").all()
+    senseis = db.query(User).filter(or_(User.role.in_(["SENSEI", "ADMIN"]), User.is_sensei == True)).all()
     students = db.query(User).filter(User.role == "STUDENT", User.is_active == True).all()
 
     # Map color stripes per dojo ID to replicate image model
@@ -129,6 +131,33 @@ def create_schedule(
     )
     db.add(new_schedule)
     db.commit()
+    return RedirectResponse(url="/schedule", status_code=303)
+
+@router.post("/api/schedules/{schedule_id}/update")
+def update_schedule(
+    schedule_id: int,
+    request: Request,
+    dojo_id: int = Form(...),
+    instructor_sensei_id: int = Form(...),
+    weekday: str = Form(...),
+    start_time: str = Form(...),
+    end_time: str = Form(...),
+    title: str = Form(...),
+    db: Session = Depends(get_db)
+):
+    current_user = getattr(request.state, "user", None)
+    if not current_user or current_user.get("role") not in ["ADMIN", "SENSEI"]:
+        raise HTTPException(status_code=403, detail="Apenas Senseis e Administradores podem alterar horários da grade.")
+
+    schedule = db.query(ClassSchedule).filter(ClassSchedule.id == schedule_id).first()
+    if schedule:
+        schedule.dojo_id = dojo_id
+        schedule.instructor_sensei_id = instructor_sensei_id
+        schedule.weekday = weekday
+        schedule.start_time = start_time
+        schedule.end_time = end_time
+        schedule.title = title
+        db.commit()
     return RedirectResponse(url="/schedule", status_code=303)
 
 @router.post("/api/sessions/create-with-attendance")

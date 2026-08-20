@@ -1145,6 +1145,20 @@ body.light-theme input[type="checkbox"]:checked {
   font-weight: 700;
   color: var(--text-main);
   padding: 0 0.5rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.date-range-caret {
+  cursor: pointer;
+  padding: 0.2rem;
+  transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.date-range-caret:hover {
+  color: var(--accent-cyan);
+  transform: scale(1.15);
 }
 
 .weekly-grid {

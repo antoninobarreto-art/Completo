@@ -29,10 +29,15 @@
     </div>
 
     <!-- DATE PICKER / RANGE NAVIGATOR -->
-    <div class="date-navigator">
-        <button class="btn btn-secondary btn-sm" onclick="changeWeek(-1)"><i class="fa-solid fa-chevron-left"></i></button>
-        <span class="date-range-text"><i class="fa-regular fa-calendar"></i> <span id="week-dates-span">20/07/2026 até 26/07/2026</span> <i class="fa-solid fa-caret-down"></i></span>
-        <button class="btn btn-secondary btn-sm" onclick="changeWeek(1)"><i class="fa-solid fa-chevron-right"></i></button>
+    <div class="date-navigator" style="position: relative;">
+        <button class="btn btn-secondary btn-sm" onclick="changeWeek(-1)" title="Semana Anterior"><i class="fa-solid fa-chevron-left"></i></button>
+        <span class="date-range-text">
+            <i class="fa-regular fa-calendar"></i>
+            <span id="week-dates-span" onclick="openWeekCalendar()" style="cursor: pointer;" title="Clique para escolher data no calendário">27/07/2026 até 02/08/2026</span>
+            <i class="fa-solid fa-caret-down date-range-caret" onclick="openWeekCalendar()" title="Clique para abrir o calendário"></i>
+        </span>
+        <input type="date" id="week-date-input" style="position: absolute; opacity: 0; pointer-events: none; width: 1px; height: 1px; clip: rect(0,0,0,0); color-scheme: dark;" onchange="onDateSelected(this.value)">
+        <button class="btn btn-secondary btn-sm" onclick="changeWeek(1)" title="Próxima Semana"><i class="fa-solid fa-chevron-right"></i></button>
     </div>
 </div>
 
@@ -82,7 +87,7 @@
                     {% if item.session and item.session.document_url %}
                         <i class="fa-solid fa-file-lines" style="color: var(--accent-amber); font-size: 0.75rem; margin-right: 4px;" title="Anexo / Plano de Aula"></i>
                     {% endif %}
-                    <i class="fa-solid fa-ellipsis diario-menu" title="Opções"></i>
+                    <i class="fa-solid fa-ellipsis diario-menu" title="Editar Horário" onclick="event.stopPropagation(); openEditScheduleModal({{ item.schedule.id }}, {{ item.schedule.dojo_id }}, '{{ item.schedule.weekday }}', '{{ item.schedule.title|replace('\'', '\\\'') }}', '{{ item.schedule.start_time }}', '{{ item.schedule.end_time }}', {{ item.schedule.instructor_sensei_id or 'null' }})"></i>
                 </div>
             </div>
 
@@ -275,9 +280,9 @@
         <form action="/api/schedules/create" method="POST">
             <div class="form-group">
                 <label class="form-label">Dojo</label>
-                <select name="dojo_id" class="form-select" required>
+                <select name="dojo_id" id="new-schedule-dojo-select" class="form-select" required onchange="updateDefaultInstructor(this)">
                     {% for dojo in dojos %}
-                        <option value="{{ dojo.id }}">{{ dojo.name }}</option>
+                        <option value="{{ dojo.id }}" data-responsible-sensei="{{ dojo.responsible_sensei_id or '' }}">{{ dojo.name }}</option>
                     {% endfor %}
                 </select>
             </div>
@@ -311,7 +316,7 @@
             </div>
             <div class="form-group">
                 <label class="form-label">Sensei Instrutor</label>
-                <select name="instructor_sensei_id" class="form-select">
+                <select name="instructor_sensei_id" id="new-schedule-instructor-select" class="form-select">
                     {% for sensei in senseis %}
                         <option value="{{ sensei.id }}">{{ sensei.name }}</option>
                     {% endfor %}
@@ -322,32 +327,201 @@
     </div>
 </div>
 
+<!-- MODAL EDITAR HORÁRIO -->
+<div class="modal-backdrop" id="modal-edit-schedule">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 style="color: white;"><i class="fa-solid fa-pen-to-square"></i> Editar Horário na Grade</h3>
+            <button class="modal-close">&times;</button>
+        </div>
+        <form id="edit-schedule-form" action="" method="POST">
+            <div class="form-group">
+                <label class="form-label">Dojo</label>
+                <select name="dojo_id" id="edit-schedule-dojo-id" class="form-select" required onchange="updateEditDefaultInstructor(this)">
+                    {% for dojo in dojos %}
+                        <option value="{{ dojo.id }}" data-responsible-sensei="{{ dojo.responsible_sensei_id or '' }}">{{ dojo.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                    <label class="form-label">Dia da Semana</label>
+                    <select name="weekday" id="edit-schedule-weekday" class="form-select">
+                        <option value="Segunda">Segunda-feira</option>
+                        <option value="Terça">Terça-feira</option>
+                        <option value="Quarta">Quarta-feira</option>
+                        <option value="Quinta">Quinta-feira</option>
+                        <option value="Sexta">Sexta-feira</option>
+                        <option value="Sábado">Sábado</option>
+                        <option value="Domingo">Domingo</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Título do Treino</label>
+                    <input type="text" name="title" id="edit-schedule-title" class="form-input" required>
+                </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                    <label class="form-label">Horário de Início</label>
+                    <input type="text" name="start_time" id="edit-schedule-start-time" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Horário de Término</label>
+                    <input type="text" name="end_time" id="edit-schedule-end-time" class="form-input" required>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Sensei Instrutor</label>
+                <select name="instructor_sensei_id" id="edit-schedule-instructor-id" class="form-select">
+                    {% for sensei in senseis %}
+                        <option value="{{ sensei.id }}">{{ sensei.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">Salvar Alterações no Horário</button>
+        </form>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
 <script>
-let currentWeekOffset = 0;
+let currentMondayDate = getMonday(new Date(2026, 6, 27));
+
+function getMonday(d) {
+    const date = new Date(d);
+    const day = date.getDay();
+    const diff = (day === 0 ? -6 : 1 - day);
+    date.setDate(date.getDate() + diff);
+    date.setHours(0, 0, 0, 0);
+    return date;
+}
+
+function formatDateBR(date) {
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+}
+
+function formatDateISO(date) {
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${year}-${month}-${day}`;
+}
+
+function updateWeekUI() {
+    const monday = new Date(currentMondayDate);
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+
+    const spanText = document.getElementById('week-dates-span');
+    if (spanText) {
+        spanText.innerText = `${formatDateBR(monday)} até ${formatDateBR(sunday)}`;
+    }
+
+    const dateInput = document.getElementById('week-date-input');
+    if (dateInput) {
+        dateInput.value = formatDateISO(monday);
+    }
+
+    // Atualiza cabeçalhos das colunas dos dias da semana (Ex: "27 - Segunda", "28 - Terça"...)
+    const dayNames = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
+    const headers = document.querySelectorAll('.weekly-grid .weekday-header');
+    
+    headers.forEach((header, index) => {
+        if (index < 7) {
+            const colDate = new Date(monday);
+            colDate.setDate(monday.getDate() + index);
+            const dayNum = String(colDate.getDate()).padStart(2, '0');
+            header.innerText = `${dayNum} - ${dayNames[index]}`;
+        }
+    });
+}
 
 function changeWeek(offset) {
-    currentWeekOffset += offset;
-    
-    // Calcula a data base 20/07/2026
-    let baseStart = new Date(2026, 6, 20); // 6 = Julho
-    let baseEnd = new Date(2026, 6, 26);
-    
-    // Aplica o offset de semanas
-    baseStart.setDate(baseStart.getDate() + (currentWeekOffset * 7));
-    baseEnd.setDate(baseEnd.getDate() + (currentWeekOffset * 7));
-    
-    // Formata
-    const format = (d) => {
-        return d.getDate().toString().padStart(2, '0') + '/' + 
-               (d.getMonth() + 1).toString().padStart(2, '0') + '/' + 
-               d.getFullYear();
-    };
-    
-    document.getElementById('week-dates-span').innerText = `${format(baseStart)} até ${format(baseEnd)}`;
+    currentMondayDate.setDate(currentMondayDate.getDate() + (offset * 7));
+    updateWeekUI();
 }
+
+function openWeekCalendar() {
+    const input = document.getElementById('week-date-input');
+    if (input) {
+        if (typeof input.showPicker === 'function') {
+            input.showPicker();
+        } else {
+            input.click();
+        }
+    }
+}
+
+function onDateSelected(val) {
+    if (!val) return;
+    const parts = val.split('-');
+    if (parts.length === 3) {
+        const y = parseInt(parts[0], 10);
+        const m = parseInt(parts[1], 10) - 1;
+        const d = parseInt(parts[2], 10);
+        const pickedDate = new Date(y, m, d);
+        currentMondayDate = getMonday(pickedDate);
+        updateWeekUI();
+    }
+}
+
+function updateDefaultInstructor(dojoSelect) {
+    if (!dojoSelect) return;
+    const selectedOption = dojoSelect.options[dojoSelect.selectedIndex];
+    const responsibleSenseiId = selectedOption ? selectedOption.getAttribute('data-responsible-sensei') : null;
+    if (responsibleSenseiId) {
+        const instructorSelect = document.getElementById('new-schedule-instructor-select');
+        if (instructorSelect) {
+            instructorSelect.value = responsibleSenseiId;
+        }
+    }
+}
+
+function updateEditDefaultInstructor(dojoSelect) {
+    if (!dojoSelect) return;
+    const selectedOption = dojoSelect.options[dojoSelect.selectedIndex];
+    const responsibleSenseiId = selectedOption ? selectedOption.getAttribute('data-responsible-sensei') : null;
+    if (responsibleSenseiId) {
+        const instructorSelect = document.getElementById('edit-schedule-instructor-id');
+        if (instructorSelect) {
+            instructorSelect.value = responsibleSenseiId;
+        }
+    }
+}
+
+function openEditScheduleModal(scheduleId, dojoId, weekday, title, startTime, endTime, instructorId) {
+    document.getElementById('edit-schedule-form').action = '/api/schedules/' + scheduleId + '/update';
+    document.getElementById('edit-schedule-dojo-id').value = dojoId;
+    document.getElementById('edit-schedule-weekday').value = weekday;
+    document.getElementById('edit-schedule-title').value = title;
+    document.getElementById('edit-schedule-start-time').value = startTime;
+    document.getElementById('edit-schedule-end-time').value = endTime;
+    if (instructorId) {
+        document.getElementById('edit-schedule-instructor-id').value = instructorId;
+    }
+    document.getElementById('modal-edit-schedule').classList.add('active');
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const today = new Date();
+    if (today.getFullYear() === 2026 && today.getMonth() === 7) {
+        currentMondayDate = getMonday(today);
+    } else {
+        currentMondayDate = getMonday(new Date(2026, 6, 27));
+    }
+    updateWeekUI();
+
+    const dojoSelect = document.getElementById('new-schedule-dojo-select');
+    if (dojoSelect) {
+        updateDefaultInstructor(dojoSelect);
+    }
+});
 
 function openSessionModal(scheduleId, title, dojoName, dojoId, attendedUserIds = []) {
     document.getElementById('modal-schedule-id').value = scheduleId;

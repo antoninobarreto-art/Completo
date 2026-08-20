@@ -2,12 +2,12 @@
 DOJOCHO - Módulo de Controle de Versão e Informações de Release
 """
 
-VERSION = "2.3.2"
+VERSION = "2.3.3"
 RELEASE_DATE = "2026-08-20"
-RELEASE_NAME = "Add attendance frequency chart and native date picker"
+RELEASE_NAME = "Atualizacoes no dashboard e fluxo de alunos"
 SYSTEM_NAME = "DOJOCHO - Sistema de Gerenciamento de Dojos de Aikido"
 ORGANIZATION = "Grupo RioAiki"
-MIN_DB_VERSION = "2.3.2"
+MIN_DB_VERSION = "2.3.3"
 
 DB_SCHEMA_VERSION = 1  # Versão numérica do esquema no SQLite (PRAGMA user_version)
 

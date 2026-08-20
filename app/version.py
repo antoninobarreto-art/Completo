@@ -2,12 +2,12 @@
 DOJOCHO - Módulo de Controle de Versão e Informações de Release
 """
 
-VERSION = "2.3.1"
+VERSION = "2.3.2"
 RELEASE_DATE = "2026-08-20"
-RELEASE_NAME = "Fix Sensei Instrutor Auto-Select no Cadastro de Horário"
+RELEASE_NAME = "Add attendance frequency chart and native date picker"
 SYSTEM_NAME = "DOJOCHO - Sistema de Gerenciamento de Dojos de Aikido"
 ORGANIZATION = "Grupo RioAiki"
-MIN_DB_VERSION = "2.3.1"
+MIN_DB_VERSION = "2.3.2"
 
 DB_SCHEMA_VERSION = 1  # Versão numérica do esquema no SQLite (PRAGMA user_version)
 

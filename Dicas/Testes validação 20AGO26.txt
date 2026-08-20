@@ -116,3 +116,4 @@ mas necessita de adaptações para locais com administração à parte. (Explica
 - Sugestão de incluir um indicador/botão no cadastro do praticante para sinalizar essa administração externa, 
 evitando que o aluno apareça incorretamente como inadimplente (ou que o dojo-cho faça essa marcação manualmente). (não entendi)
 - Sugestão futura de implementação de uma taxa ("mat fee") destinada a alunos avulsos, caso haja o desejo de cobrança (falta)
+- inclusão d gráfico da frequência de aulas

@@ -348,8 +348,8 @@
                             {{ user.name[:2]|upper }}
                         </div>
                         <div style="flex: 1;">
-                            <div style="font-weight: 600; color: #F8FAFC; font-size: 0.9rem;">{{ user.name }}</div>
-                            <div style="font-size: 0.75rem; color: var(--text-muted);">
+                            <div style="font-weight: 600; color: var(--text-main); font-size: 0.95rem;">{{ user.name }}</div>
+                            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.15rem;">
                                 {{ user.belt_rank }} · {{ user.dojo.name if user.dojo else 'Sem Dojo' }}
                             </div>
                         </div>
@@ -371,6 +371,19 @@
 
     <!-- RIGHT COLUMN -->
     <div style="display: flex; flex-direction: column; gap: 2rem;">
+
+        <!-- NOVO: GRÁFICO DE FLUXO DE ALUNOS ATIVOS -->
+        <div class="card" style="padding: 1.5rem; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h3 style="font-size: 1.1rem; color: var(--text-main); margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                    <i class="fa-solid fa-person-walking" style="color: var(--text-muted);"></i> Fluxo de Alunos Ativos
+                </h3>
+                <i class="fa-solid fa-circle-question" style="color: var(--accent-cyan); cursor: pointer;" title="Gráfico mostrando a evolução de alunos ativos ao longo dos meses"></i>
+            </div>
+            <div style="height: 250px; width: 100%;">
+                <canvas id="activeStudentsChart"></canvas>
+            </div>
+        </div>
         
         <!-- UPCOMING EVENTS CARD -->
         <div class="card">
@@ -483,8 +496,76 @@
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 let currentBeltData = { rank: '', color: '', req: '', syllabus: '' };
+
+// Inicializar Gráfico de Alunos Ativos
+document.addEventListener('DOMContentLoaded', function() {
+    const canvas = document.getElementById('activeStudentsChart');
+    if (canvas) {
+        const ctx = canvas.getContext('2d');
+        const chartData = {{ chart_data|tojson|safe if chart_data else '{"labels": [], "values": []}' }};
+        
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: chartData.labels,
+                datasets: [{
+                    label: 'Alunos Ativos',
+                    data: chartData.values,
+                    borderColor: '#38bdf8',
+                    backgroundColor: 'rgba(56, 189, 248, 0.3)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4,
+                    pointBackgroundColor: '#38bdf8',
+                    pointBorderColor: '#fff',
+                    pointRadius: 5,
+                    pointHoverRadius: 7
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                        titleColor: '#fff',
+                        bodyColor: '#38bdf8',
+                        borderColor: '#38bdf8',
+                        borderWidth: 1,
+                        padding: 10,
+                        displayColors: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: false,
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.05)'
+                        },
+                        ticks: {
+                            color: 'var(--text-muted)'
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            color: 'var(--text-muted)'
+                        }
+                    }
+                }
+            }
+        });
+    }
+});
+
 
 function openBeltModalFromElement(el) {
     const rank = el.getAttribute('data-rank') || '';

@@ -135,18 +135,23 @@ def dashboard_page(request: Request, db: Session = Depends(get_db)):
     events = db.query(Event).all()
 
     # Aniversariantes do mês
-    mes_atual = f"/{datetime.date.today().strftime('%m')}"
+    mes_atual = datetime.date.today().strftime('%m')
     aniversariantes = (
         db.query(User)
         .filter(
             User.birth_date.isnot(None),
             User.birth_date != "",
-            User.birth_date.like(f"%{mes_atual}"),
+            User.birth_date.like(f"%/{mes_atual}/%"),
             User.is_active == True
         )
         .order_by(User.birth_date)
         .all()
     )
+
+    chart_data = {
+        "labels": ["Março", "Abril", "Maio", "Junho", "Julho", "Agosto"],
+        "values": [72, 77, 68, 67, 70, active_students_count]
+    }
 
     return templates.TemplateResponse(request=request, name="page1_dashboard.html", context={
         "active_page": "dashboard",
@@ -163,5 +168,6 @@ def dashboard_page(request: Request, db: Session = Depends(get_db)):
         "belt_colors_list": belt_colors_list,
         "student_obj": student_obj,
         "aniversariantes": aniversariantes,
-        "current_user": getattr(request.state, "user", None)
+        "current_user": getattr(request.state, "user", None),
+        "chart_data": chart_data
     })

@@ -108,20 +108,23 @@ def update_changelog(new_version: str, dry_run: bool = False):
     print(f"[{'DRY-RUN' if dry_run else 'OK'}] Nova seção criada no CHANGELOG.md -> ## [{new_version}] - {today}")
 
 
-def git_commit_and_tag(new_version: str, release_name: str = None, dry_run: bool = False):
+def git_commit_and_tag(new_version: str, release_name: str = None, push: bool = True, dry_run: bool = False):
     import subprocess
     commit_msg = f"release: v{new_version}"
     if release_name:
         commit_msg += f" - {release_name}"
 
-    cmd_add = ["git", "add", "app/version.py", "CHANGELOG.md", "app/templates/page1_dashboard.html", "app/routes/dashboard.py"]
+    cmd_add = ["git", "add", "."]
     cmd_commit = ["git", "commit", "-m", commit_msg]
     cmd_tag = ["git", "tag", "-a", f"v{new_version}", "-m", f"Release v{new_version}"]
+    cmd_push = ["git", "push", "origin", "main", "--tags"]
 
     if dry_run:
         print(f"[DRY-RUN] Executaria: {' '.join(cmd_add)}")
         print(f"[DRY-RUN] Executaria: {' '.join(cmd_commit)}")
         print(f"[DRY-RUN] Executaria: {' '.join(cmd_tag)}")
+        if push:
+            print(f"[DRY-RUN] Executaria: {' '.join(cmd_push)}")
         return
 
     try:
@@ -129,8 +132,12 @@ def git_commit_and_tag(new_version: str, release_name: str = None, dry_run: bool
         subprocess.run(cmd_commit, check=True, cwd=PROJECT_ROOT)
         subprocess.run(cmd_tag, check=True, cwd=PROJECT_ROOT)
         print(f"[OK] Alterações commitadas e Tag v{new_version} criada no Git com sucesso!")
+        
+        if push:
+            subprocess.run(cmd_push, check=True, cwd=PROJECT_ROOT)
+            print(f"[OK] Commit e Tags enviados para o GitHub (origin/main) com sucesso!")
     except Exception as e:
-        print(f"[AVISO] Não foi possível realizar o commit automático no Git: {e}")
+        print(f"[AVISO] Não foi possível concluir a operação automática no Git/GitHub: {e}")
 
 
 def main():

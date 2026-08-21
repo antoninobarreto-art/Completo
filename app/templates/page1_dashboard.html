@@ -62,7 +62,7 @@
         <div class="stat-icon" style="color: var(--accent-cyan);"><i class="fa-solid fa-user-ninja"></i></div>
         <div>
             <div class="stat-value">{{ active_students_count }}</div>
-            <div class="stat-label">Alunos Ativos ({{ inactive_students_count }} Inativos) <i class="fa-solid fa-arrow-right" style="font-size: 0.75rem; margin-left: 0.2rem; opacity: 0.6;"></i></div>
+            <div class="stat-label">Alunos Ativos ({{ inactive_students_count }} Inativos · {{ active_students_count + inactive_students_count }} Totais) <i class="fa-solid fa-arrow-right" style="font-size: 0.75rem; margin-left: 0.2rem; opacity: 0.6;"></i></div>
         </div>
     </a>
     
@@ -276,94 +276,97 @@
             </div>
         </div>
 
-        <!-- SECTION 3: TABELA DE GRADUAÇÕES & CORES DE FAIXA -->
-        <div class="card" id="tabela-graduacoes" style="scroll-margin-top: 100px;">
-            <div class="card-header">
-                <h3 class="card-title">
-                    <i class="fa-solid fa-graduation-cap" style="color: var(--accent-amber);"></i> Graduações & Cores de Faixas
-                </h3>
+        <!-- SUB-GRID 2 COLUNAS: GRADUAÇÕES & ANIVERSARIANTES -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; align-items: start;">
+            <!-- SECTION 3: TABELA DE GRADUAÇÕES & CORES DE FAIXA -->
+            <div class="card" id="tabela-graduacoes" style="scroll-margin-top: 100px;">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fa-solid fa-graduation-cap" style="color: var(--accent-amber);"></i> Graduações & Cores de Faixas
+                    </h3>
+                </div>
+
+                <div class="table-responsive" style="max-height: 380px; overflow-y: auto;">
+                    <table class="custom-table" style="font-size: 0.85rem;">
+                        <thead>
+                            <tr>
+                                <th>Graduação</th>
+                                <th>Cor da Faixa</th>
+                                <th>Aulas Requeridas</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in belt_colors_list %}
+                            <tr>
+                                <td><strong>{{ item.rank }}</strong></td>
+                                <td>
+                                    {% if 'amarela' in item.color.lower() %}
+                                        <span class="badge badge-belt-fixed badge-belt-yellow" style="background: #FFDA55 !important; color: #000000 !important; font-weight: 700 !important; border: none !important;" title="Clique para ver o programa de técnicas da {{ item.rank }}" data-rank="{{ item.rank }}" data-color="{{ item.color }}" data-req="{{ item.requirements or '' }}" data-syllabus="{{ item.syllabus or '' }}" data-video="{{ item.video_url or '' }}" onclick="openBeltModalFromElement(this)"><i class="fa-solid fa-ribbon"></i> {{ item.color|capitalize }}</span>
+                                    {% elif 'roxa' in item.color.lower() %}
+                                        <span class="badge badge-belt-fixed" style="background: #A855F7; color: #FFF; font-weight: 700;" title="Clique para ver o programa de técnicas da {{ item.rank }}" data-rank="{{ item.rank }}" data-color="{{ item.color }}" data-req="{{ item.requirements or '' }}" data-syllabus="{{ item.syllabus or '' }}" data-video="{{ item.video_url or '' }}" onclick="openBeltModalFromElement(this)"><i class="fa-solid fa-ribbon"></i> {{ item.color|capitalize }}</span>
+                                    {% elif 'verde' in item.color.lower() %}
+                                        <span class="badge badge-belt-fixed" style="background: #10B981; color: #FFF; font-weight: 700;" title="Clique para ver o programa de técnicas da {{ item.rank }}" data-rank="{{ item.rank }}" data-color="{{ item.color }}" data-req="{{ item.requirements or '' }}" data-syllabus="{{ item.syllabus or '' }}" data-video="{{ item.video_url or '' }}" onclick="openBeltModalFromElement(this)"><i class="fa-solid fa-ribbon"></i> {{ item.color|capitalize }}</span>
+                                    {% elif 'azul' in item.color.lower() %}
+                                        <span class="badge badge-belt-fixed" style="background: #0284C7; color: #FFF; font-weight: 700;" title="Clique para ver o programa de técnicas da {{ item.rank }}" data-rank="{{ item.rank }}" data-color="{{ item.color }}" data-req="{{ item.requirements or '' }}" data-syllabus="{{ item.syllabus or '' }}" data-video="{{ item.video_url or '' }}" onclick="openBeltModalFromElement(this)"><i class="fa-solid fa-ribbon"></i> {{ item.color|capitalize }}</span>
+                                    {% elif 'marrom' in item.color.lower() %}
+                                        <span class="badge badge-belt-fixed" style="background: #78350F; color: #FFF; font-weight: 700;" title="Clique para ver o programa de técnicas da {{ item.rank }}" data-rank="{{ item.rank }}" data-color="{{ item.color }}" data-req="{{ item.requirements or '' }}" data-syllabus="{{ item.syllabus or '' }}" data-video="{{ item.video_url or '' }}" onclick="openBeltModalFromElement(this)"><i class="fa-solid fa-ribbon"></i> {{ item.color|capitalize }}</span>
+                                    {% elif 'preta' in item.color.lower() %}
+                                        <span class="badge badge-belt-fixed" style="background: #0F172A; border: 1px solid #475569; color: #FFF; font-weight: 700;" title="Clique para ver o programa de técnicas da {{ item.rank }}" data-rank="{{ item.rank }}" data-color="{{ item.color }}" data-req="{{ item.requirements or '' }}" data-syllabus="{{ item.syllabus or '' }}" data-video="{{ item.video_url or '' }}" onclick="openBeltModalFromElement(this)"><i class="fa-solid fa-ribbon"></i> {{ item.color|capitalize }}</span>
+                                    {% else %}
+                                        <span class="badge badge-secondary badge-belt-fixed" title="Clique para ver o programa de técnicas da {{ item.rank }}" data-rank="{{ item.rank }}" data-color="{{ item.color }}" data-req="{{ item.requirements or '' }}" data-syllabus="{{ item.syllabus or '' }}" data-video="{{ item.video_url or '' }}" onclick="openBeltModalFromElement(this)"><i class="fa-solid fa-ribbon"></i> {{ item.color|capitalize }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if item.requirements %}
+                                        <span class="badge badge-cyan" style="font-weight: 600;"><i class="fa-solid fa-clock"></i> {{ item.requirements }}</span>
+                                    {% else %}
+                                        <span style="color: var(--text-muted);">-</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
-            <div class="table-responsive" style="max-height: 380px; overflow-y: auto;">
-                <table class="custom-table" style="font-size: 0.85rem;">
-                    <thead>
-                        <tr>
-                            <th>Graduação</th>
-                            <th>Cor da Faixa</th>
-                            <th>Aulas Requeridas</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for item in belt_colors_list %}
-                        <tr>
-                            <td><strong>{{ item.rank }}</strong></td>
-                            <td>
-                                {% if 'amarela' in item.color.lower() %}
-                                    <span class="badge badge-belt-fixed badge-belt-yellow" style="background: #FFDA55 !important; color: #000000 !important; font-weight: 700 !important; border: none !important;" title="Clique para ver o programa de técnicas da {{ item.rank }}" data-rank="{{ item.rank }}" data-color="{{ item.color }}" data-req="{{ item.requirements or '' }}" data-syllabus="{{ item.syllabus or '' }}" data-video="{{ item.video_url or '' }}" onclick="openBeltModalFromElement(this)"><i class="fa-solid fa-ribbon"></i> {{ item.color|capitalize }}</span>
-                                {% elif 'roxa' in item.color.lower() %}
-                                    <span class="badge badge-belt-fixed" style="background: #A855F7; color: #FFF; font-weight: 700;" title="Clique para ver o programa de técnicas da {{ item.rank }}" data-rank="{{ item.rank }}" data-color="{{ item.color }}" data-req="{{ item.requirements or '' }}" data-syllabus="{{ item.syllabus or '' }}" data-video="{{ item.video_url or '' }}" onclick="openBeltModalFromElement(this)"><i class="fa-solid fa-ribbon"></i> {{ item.color|capitalize }}</span>
-                                {% elif 'verde' in item.color.lower() %}
-                                    <span class="badge badge-belt-fixed" style="background: #10B981; color: #FFF; font-weight: 700;" title="Clique para ver o programa de técnicas da {{ item.rank }}" data-rank="{{ item.rank }}" data-color="{{ item.color }}" data-req="{{ item.requirements or '' }}" data-syllabus="{{ item.syllabus or '' }}" data-video="{{ item.video_url or '' }}" onclick="openBeltModalFromElement(this)"><i class="fa-solid fa-ribbon"></i> {{ item.color|capitalize }}</span>
-                                {% elif 'azul' in item.color.lower() %}
-                                    <span class="badge badge-belt-fixed" style="background: #0284C7; color: #FFF; font-weight: 700;" title="Clique para ver o programa de técnicas da {{ item.rank }}" data-rank="{{ item.rank }}" data-color="{{ item.color }}" data-req="{{ item.requirements or '' }}" data-syllabus="{{ item.syllabus or '' }}" data-video="{{ item.video_url or '' }}" onclick="openBeltModalFromElement(this)"><i class="fa-solid fa-ribbon"></i> {{ item.color|capitalize }}</span>
-                                {% elif 'marrom' in item.color.lower() %}
-                                    <span class="badge badge-belt-fixed" style="background: #78350F; color: #FFF; font-weight: 700;" title="Clique para ver o programa de técnicas da {{ item.rank }}" data-rank="{{ item.rank }}" data-color="{{ item.color }}" data-req="{{ item.requirements or '' }}" data-syllabus="{{ item.syllabus or '' }}" data-video="{{ item.video_url or '' }}" onclick="openBeltModalFromElement(this)"><i class="fa-solid fa-ribbon"></i> {{ item.color|capitalize }}</span>
-                                {% elif 'preta' in item.color.lower() %}
-                                    <span class="badge badge-belt-fixed" style="background: #0F172A; border: 1px solid #475569; color: #FFF; font-weight: 700;" title="Clique para ver o programa de técnicas da {{ item.rank }}" data-rank="{{ item.rank }}" data-color="{{ item.color }}" data-req="{{ item.requirements or '' }}" data-syllabus="{{ item.syllabus or '' }}" data-video="{{ item.video_url or '' }}" onclick="openBeltModalFromElement(this)"><i class="fa-solid fa-ribbon"></i> {{ item.color|capitalize }}</span>
-                                {% else %}
-                                    <span class="badge badge-secondary badge-belt-fixed" title="Clique para ver o programa de técnicas da {{ item.rank }}" data-rank="{{ item.rank }}" data-color="{{ item.color }}" data-req="{{ item.requirements or '' }}" data-syllabus="{{ item.syllabus or '' }}" data-video="{{ item.video_url or '' }}" onclick="openBeltModalFromElement(this)"><i class="fa-solid fa-ribbon"></i> {{ item.color|capitalize }}</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% if item.requirements %}
-                                    <span class="badge badge-cyan" style="font-weight: 600;"><i class="fa-solid fa-clock"></i> {{ item.requirements }}</span>
-                                {% else %}
-                                    <span style="color: var(--text-muted);">-</span>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- ANIVERSARIANTES DO MÊS -->
-        <div class="card" id="aniversariantes" style="scroll-margin-top: 100px;">
-            <div class="card-header">
-                <h3 class="card-title" style="display: flex; align-items: center; gap: 0.6rem;">
-                    <span style="width: 32px; height: 32px; border-radius: 8px; background: rgba(56, 189, 248, 0.15); display: flex; align-items: center; justify-content: center; color: #38BDF8;">
-                        <i class="fa-solid fa-cake-candles"></i>
-                    </span>
-                    <span>Aniversariantes do Mês</span>
-                </h3>
-            </div>
-            <div style="padding: 1rem; display: flex; flex-direction: column; gap: 0.6rem;">
-                {% if aniversariantes %}
-                    {% for user in aniversariantes %}
-                    <div style="display: flex; align-items: center; gap: 0.75rem; padding: 0.6rem 0.85rem; background: var(--bg-surface); border-radius: var(--radius-sm); border: 1px solid var(--border-color); transition: var(--transition);"
-                         onmouseover="this.style.borderColor='rgba(56, 189, 248, 0.4)'; this.style.transform='translateY(-1px)';"
-                         onmouseout="this.style.borderColor='var(--border-color)'; this.style.transform='none';">
-                        <div style="width: 38px; height: 38px; border-radius: 50%; background: linear-gradient(135deg, #0284C7, #38BDF8); display: flex; align-items: center; justify-content: center; color: #FFF; font-weight: 700; font-size: 0.85rem; flex-shrink: 0; box-shadow: 0 2px 10px rgba(56, 189, 248, 0.25);">
-                            {{ user.name[:2]|upper }}
-                        </div>
-                        <div style="flex: 1;">
-                            <div style="font-weight: 600; color: var(--text-main); font-size: 0.95rem;">{{ user.name }}</div>
-                            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.15rem;">
-                                {{ user.belt_rank }} · {{ user.dojo.name if user.dojo else 'Sem Dojo' }}
+            <!-- ANIVERSARIANTES DO MÊS -->
+            <div class="card" id="aniversariantes" style="scroll-margin-top: 100px;">
+                <div class="card-header">
+                    <h3 class="card-title" style="display: flex; align-items: center; gap: 0.6rem;">
+                        <span style="width: 32px; height: 32px; border-radius: 8px; background: rgba(56, 189, 248, 0.15); display: flex; align-items: center; justify-content: center; color: #38BDF8;">
+                            <i class="fa-solid fa-cake-candles"></i>
+                        </span>
+                        <span>Aniversariantes do Mês</span>
+                    </h3>
+                </div>
+                <div style="padding: 1rem; display: flex; flex-direction: column; gap: 0.6rem; max-height: 380px; overflow-y: auto;">
+                    {% if aniversariantes %}
+                        {% for user in aniversariantes %}
+                        <div style="display: flex; align-items: center; gap: 0.75rem; padding: 0.6rem 0.85rem; background: var(--bg-surface); border-radius: var(--radius-sm); border: 1px solid var(--border-color); transition: var(--transition);"
+                             onmouseover="this.style.borderColor='rgba(56, 189, 248, 0.4)'; this.style.transform='translateY(-1px)';"
+                             onmouseout="this.style.borderColor='var(--border-color)'; this.style.transform='none';">
+                            <div style="width: 38px; height: 38px; border-radius: 50%; background: linear-gradient(135deg, #0284C7, #38BDF8); display: flex; align-items: center; justify-content: center; color: #FFF; font-weight: 700; font-size: 0.85rem; flex-shrink: 0; box-shadow: 0 2px 10px rgba(56, 189, 248, 0.25);">
+                                {{ user.name[:2]|upper }}
+                            </div>
+                            <div style="flex: 1;">
+                                <div style="font-weight: 600; color: var(--text-main); font-size: 0.95rem;">{{ user.name }}</div>
+                                <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.15rem;">
+                                    {{ user.belt_rank }} · {{ user.dojo.name if user.dojo else 'Sem Dojo' }}
+                                </div>
+                            </div>
+                            <div style="font-size: 0.8rem; color: #38BDF8; font-weight: 600; white-space: nowrap; display: flex; align-items: center; gap: 0.4rem; background: rgba(56, 189, 248, 0.12); padding: 0.35rem 0.65rem; border-radius: 20px; border: 1px solid rgba(56, 189, 248, 0.25);">
+                                <i class="fa-solid fa-cake-candles" style="font-size: 0.75rem;"></i> {{ user.birth_date }}
                             </div>
                         </div>
-                        <div style="font-size: 0.8rem; color: #38BDF8; font-weight: 600; white-space: nowrap; display: flex; align-items: center; gap: 0.4rem; background: rgba(56, 189, 248, 0.12); padding: 0.35rem 0.65rem; border-radius: 20px; border: 1px solid rgba(56, 189, 248, 0.25);">
-                            <i class="fa-solid fa-cake-candles" style="font-size: 0.75rem;"></i> {{ user.birth_date }}
+                        {% endfor %}
+                    {% else %}
+                        <div style="text-align: center; padding: 1.5rem; color: var(--text-muted);">
+                            <i class="fa-solid fa-calendar" style="font-size: 1.5rem; margin-bottom: 0.5rem; display: block;"></i>
+                            Nenhum aniversariante este mês
                         </div>
-                    </div>
-                    {% endfor %}
-                {% else %}
-                    <div style="text-align: center; padding: 1.5rem; color: var(--text-muted);">
-                        <i class="fa-solid fa-calendar" style="font-size: 1.5rem; margin-bottom: 0.5rem; display: block;"></i>
-                        Nenhum aniversariante este mês
-                    </div>
-                {% endif %}
+                    {% endif %}
+                </div>
             </div>
         </div>
 

@@ -60,12 +60,21 @@ def management_page(request: Request, db: Session = Depends(get_db)):
     pending_guests_count = db.query(GuestApproval).filter(GuestApproval.status == "PENDING").count()
     pending_classifieds_count = db.query(Classified).filter(Classified.status == "PENDING_SENSEI").count()
 
+    active_students_count = sum(1 for s in students if s.is_active)
+    inactive_students_count = sum(1 for s in students if not s.is_active)
+    active_senseis_count = sum(1 for s in senseis if s.is_active)
+    inactive_senseis_count = sum(1 for s in senseis if not s.is_active)
+
     return templates.TemplateResponse(request=request, name="page2_management.html", context={
         "active_page": "management",
         "dojos": dojos,
         "users": users,
         "senseis": senseis,
         "students": students,
+        "active_students_count": active_students_count,
+        "inactive_students_count": inactive_students_count,
+        "active_senseis_count": active_senseis_count,
+        "inactive_senseis_count": inactive_senseis_count,
         "pending_guests_count": pending_guests_count,
         "pending_classifieds_count": pending_classifieds_count,
         "current_user": current_user

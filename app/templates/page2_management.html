@@ -18,10 +18,10 @@
             <i class="fa-solid fa-torii-gate"></i> Dojos Cadastrados ({{ dojos|length }})
         </button>
         <button class="subnav-tab" id="tab-btn-senseis" onclick="switchManagementTab('senseis')">
-            <i class="fa-solid fa-graduation-cap"></i> Senseis & Instrutores ({{ senseis|length }})
+            <i class="fa-solid fa-graduation-cap"></i> Senseis & Instrutores ({{ active_senseis_count }} Ativos / {{ senseis|length }} Totais)
         </button>
         <button class="subnav-tab" id="tab-btn-alunos" onclick="switchManagementTab('alunos')">
-            <i class="fa-solid fa-user-ninja"></i> Alunos & Practicantes ({{ students|length }})
+            <i class="fa-solid fa-user-ninja"></i> Alunos & Praticantes ({{ active_students_count }} Ativos / {{ students|length }} Totais)
         </button>
     </div>
 

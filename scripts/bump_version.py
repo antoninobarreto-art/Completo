@@ -108,6 +108,31 @@ def update_changelog(new_version: str, dry_run: bool = False):
     print(f"[{'DRY-RUN' if dry_run else 'OK'}] Nova seção criada no CHANGELOG.md -> ## [{new_version}] - {today}")
 
 
+def git_commit_and_tag(new_version: str, release_name: str = None, dry_run: bool = False):
+    import subprocess
+    commit_msg = f"release: v{new_version}"
+    if release_name:
+        commit_msg += f" - {release_name}"
+
+    cmd_add = ["git", "add", "app/version.py", "CHANGELOG.md", "app/templates/page1_dashboard.html", "app/routes/dashboard.py"]
+    cmd_commit = ["git", "commit", "-m", commit_msg]
+    cmd_tag = ["git", "tag", "-a", f"v{new_version}", "-m", f"Release v{new_version}"]
+
+    if dry_run:
+        print(f"[DRY-RUN] Executaria: {' '.join(cmd_add)}")
+        print(f"[DRY-RUN] Executaria: {' '.join(cmd_commit)}")
+        print(f"[DRY-RUN] Executaria: {' '.join(cmd_tag)}")
+        return
+
+    try:
+        subprocess.run(cmd_add, check=True, cwd=PROJECT_ROOT)
+        subprocess.run(cmd_commit, check=True, cwd=PROJECT_ROOT)
+        subprocess.run(cmd_tag, check=True, cwd=PROJECT_ROOT)
+        print(f"[OK] Alterações commitadas e Tag v{new_version} criada no Git com sucesso!")
+    except Exception as e:
+        print(f"[AVISO] Não foi possível realizar o commit automático no Git: {e}")
+
+
 def main():
     if hasattr(sys.stdout, 'reconfigure'):
         try:
@@ -119,6 +144,7 @@ def main():
     parser.add_argument("--type", choices=["major", "minor", "patch"], help="Tipo de incremento semântico")
     parser.add_argument("--set", dest="set_version", type=str, help="Definir uma versão específica diretamente (ex: 2.4.0)")
     parser.add_argument("--name", type=str, help="Nome do release ou descrição resumida")
+    parser.add_argument("--commit", action="store_true", help="Realizar git add, commit e tag automaticamente")
     parser.add_argument("--dry-run", action="store_true", help="Simular alterações sem modificar arquivos")
 
     args = parser.parse_args()
@@ -141,6 +167,9 @@ def main():
 
     update_version_py(new_version, release_name=args.name, dry_run=args.dry_run)
     update_changelog(new_version, dry_run=args.dry_run)
+
+    if args.commit:
+        git_commit_and_tag(new_version, release_name=args.name, dry_run=args.dry_run)
 
     print(f"[SUCCESS] Processo de versionamento para v{new_version} concluído com sucesso!")
 

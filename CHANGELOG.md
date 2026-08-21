@@ -8,13 +8,15 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 ## [2.4.2] - 2026-08-21
 
 ### Adicionado
-- 
+- **Roteiro de Deploy para Google Cloud**: Adicionado o documento final de deploy (`originais/Roteiro_de_Deploy_Corrigido.md`) contendo os alertas de segurança para backup do SQLite (`rioaiki.db`) e geração de chave `.env`.
 
 ### Alterado / Refatorado
-- 
+- **Layout Responsivo em 2 Colunas no Dashboard**: Re-organizados os cards de **Graduações & Cores de Faixas** e **Aniversariantes do Mês** para exibição horizontal lado a lado no `page1_dashboard.html`.
+- **Padronização Visual dos KPIs de Alunos e Senseis**: Atualizados os rótulos e distintivos nas páginas de Gestão e Dashboard para exibir a contagem de ativos e totais de forma transparente (`62 Ativos / 251 Totais`).
 
 ### Corrigido
-- 
+- **Consistência nos KPIs de Alunos**: Eliminada a divergência visual entre os cartões do Painel Geral e as abas da página de Gestão (`/management`).
+- **Correção Ortográfica**: Ajustada a grafia de "Practicantes" para "Praticantes" na aba de alunos da Gestão.
 
 ---
 

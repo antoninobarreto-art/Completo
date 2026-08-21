@@ -5,6 +5,20 @@ Todas as alterações notáveis neste projeto serão documentadas neste arquivo.
 O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/),
 e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
+## [2.4.1] - 2026-08-21
+
+### Adicionado
+- **Suporte a Eixos Duplos (Dual Y-Axis) no Gráfico do Dashboard**: Adicionada escala secundária dedicada no lado direito (em tom azul) para exibir a evolução de **Alunos Ativos** proporcionalmente à **Frequência Mensal**.
+- **Plano de Rollout para Produção**: Elaborado plano de implantação oficial (`implementation_plan.md`) cobrindo sanitização de banco, configuração de variáveis de ambiente (`JWT_SECRET_KEY`), HTTPS e rotina de backup.
+
+### Alterado / Refatorado
+- **Cálculo da Métrica de Alunos Ativos**: Alterada a curva azul no gráfico do dashboard de "Alunos Únicos Presentes" para o "Total de Alunos Ativos Matriculados Acumulados" até aquele mês com base no `start_date`.
+
+### Corrigido
+- **Visibilidade da Legenda do Gráfico**: Corrigida a cor do texto da legenda no `page1_dashboard.html` que estava fixada em branco tornando-a invisível no tema claro do sistema.
+
+---
+
 ## [2.4.0] - 2026-08-21
 
 ### Adicionado

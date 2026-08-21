@@ -40,15 +40,19 @@ def get_chart_data(start_date: str = None, end_date: str = None, dojo_id: int = 
         
     records = query.all()
     
-    # Group by YYYY-MM
+    # Group by YYYY-MM for attendances
     data_by_month = {}
     for r in records:
         month_str = r[0][:7] # Extract YYYY-MM
-        user_id = r[1]
         if month_str not in data_by_month:
-            data_by_month[month_str] = {"attendances": 0, "users": set()}
+            data_by_month[month_str] = {"attendances": 0}
         data_by_month[month_str]["attendances"] += 1
-        data_by_month[month_str]["users"].add(user_id)
+        
+    # Fetch all active students to calculate historical active count
+    user_query = db.query(User.start_date).filter(User.role == "STUDENT", User.is_active == True)
+    if dojo_id:
+        user_query = user_query.filter(User.dojo_id == dojo_id)
+    all_active_users = user_query.all()
         
     # Generate labels from start_date to end_date
     labels = []
@@ -67,18 +71,29 @@ def get_chart_data(start_date: str = None, end_date: str = None, dojo_id: int = 
         label = f"{months_pt[current_date.month - 1]}/{current_date.year}"
         labels.append(label)
         
+        # Calculate attendances for the month
         if month_str in data_by_month:
             attendances_values.append(data_by_month[month_str]["attendances"])
-            active_users_values.append(len(data_by_month[month_str]["users"]))
         else:
             attendances_values.append(0)
-            active_users_values.append(0)
+            
+        # Determine the last day of the current month
+        if current_date.month == 12:
+            next_month = current_date.replace(year=current_date.year + 1, month=1)
+        else:
+            next_month = current_date.replace(month=current_date.month + 1)
+        last_day = next_month - datetime.timedelta(days=1)
+        last_day_str = last_day.strftime("%Y-%m-%d")
+        
+        # Calculate active users up to this month
+        active_count = 0
+        for u in all_active_users:
+            if not u.start_date or u.start_date <= last_day_str:
+                active_count += 1
+        active_users_values.append(active_count)
             
         # Increment month
-        if current_date.month == 12:
-            current_date = current_date.replace(year=current_date.year + 1, month=1)
-        else:
-            current_date = current_date.replace(month=current_date.month + 1)
+        current_date = next_month
             
     return {
         "labels": labels,

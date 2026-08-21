@@ -554,7 +554,7 @@ function loadChartData() {
             
             if (showActive) {
                 datasets.push({
-                    label: 'Alunos Únicos (Presença)',
+                    label: 'Total de Alunos Ativos',
                     data: data.active_users,
                     borderColor: '#38bdf8',
                     backgroundColor: 'rgba(56, 189, 248, 0.3)',
@@ -564,7 +564,8 @@ function loadChartData() {
                     pointBackgroundColor: '#38bdf8',
                     pointBorderColor: '#fff',
                     pointRadius: 5,
-                    pointHoverRadius: 7
+                    pointHoverRadius: 7,
+                    yAxisID: 'y1'
                 });
             }
             
@@ -580,7 +581,8 @@ function loadChartData() {
                     pointBackgroundColor: '#10b981',
                     pointBorderColor: '#fff',
                     pointRadius: 5,
-                    pointHoverRadius: 7
+                    pointHoverRadius: 7,
+                    yAxisID: 'y'
                 });
             }
 
@@ -604,7 +606,7 @@ function loadChartData() {
                     plugins: {
                         legend: {
                             display: true,
-                            labels: { color: 'rgba(255,255,255,0.7)' }
+                            labels: { color: 'var(--text-main)' }
                         },
                         tooltip: {
                             backgroundColor: 'rgba(15, 23, 42, 0.9)',
@@ -618,12 +620,27 @@ function loadChartData() {
                     },
                     scales: {
                         y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
                             beginAtZero: true,
                             grid: {
                                 color: 'rgba(255, 255, 255, 0.05)'
                             },
                             ticks: {
                                 color: 'var(--text-muted)'
+                            }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            beginAtZero: true,
+                            grid: {
+                                drawOnChartArea: false,
+                            },
+                            ticks: {
+                                color: '#38bdf8'
                             }
                         },
                         x: {

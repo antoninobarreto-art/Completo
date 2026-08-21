@@ -2,12 +2,12 @@
 DOJOCHO - Módulo de Controle de Versão e Informações de Release
 """
 
-VERSION = "2.4.0"
+VERSION = "2.4.1"
 RELEASE_DATE = "2026-08-21"
-RELEASE_NAME = "Novo Grafico de Fluxo, Filtros e Restricao de Permissoes por Dojo"
+RELEASE_NAME = "Eixos Duplos no Grafico, Correcao de Legenda e Calculo de Alunos Ativos"
 SYSTEM_NAME = "DOJOCHO - Sistema de Gerenciamento de Dojos de Aikido"
 ORGANIZATION = "Grupo RioAiki"
-MIN_DB_VERSION = "2.4.0"
+MIN_DB_VERSION = "2.4.1"
 
 DB_SCHEMA_VERSION = 1  # Versão numérica do esquema no SQLite (PRAGMA user_version)
 

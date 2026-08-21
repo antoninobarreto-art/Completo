@@ -376,10 +376,42 @@
         <div class="card" style="padding: 1.5rem; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-md);">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                 <h3 style="font-size: 1.1rem; color: var(--text-main); margin: 0; display: flex; align-items: center; gap: 0.5rem;">
-                    <i class="fa-solid fa-person-walking" style="color: var(--text-muted);"></i> Fluxo de Alunos Ativos
+                    <i class="fa-solid fa-chart-line" style="color: var(--text-muted);"></i> Estatísticas do Dojo
                 </h3>
-                <i class="fa-solid fa-circle-question" style="color: var(--accent-cyan); cursor: pointer;" title="Gráfico mostrando a evolução de alunos ativos ao longo dos meses"></i>
             </div>
+            
+            <!-- FILTROS DO GRÁFICO -->
+            <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.5rem; background: rgba(0,0,0,0.2); padding: 1rem; border-radius: var(--radius-sm);">
+                <div style="flex: 1; min-width: 150px;">
+                    <label style="display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.3rem;">Dojo</label>
+                    <select id="chart-dojo-filter" class="form-input" style="width: 100%; padding: 0.4rem;">
+                        <option value="">Todos os Dojos</option>
+                        {% for dojo in dojos %}
+                        <option value="{{ dojo.id }}">{{ dojo.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div style="flex: 1; min-width: 120px;">
+                    <label style="display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.3rem;">Mês Inicial</label>
+                    <input type="month" id="chart-start-month" class="form-input" style="width: 100%; padding: 0.4rem;">
+                </div>
+                <div style="flex: 1; min-width: 120px;">
+                    <label style="display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.3rem;">Mês Final</label>
+                    <input type="month" id="chart-end-month" class="form-input" style="width: 100%; padding: 0.4rem;">
+                </div>
+                <div style="flex: 1; min-width: 200px;">
+                    <label style="display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.3rem;">Métricas</label>
+                    <div style="display: flex; gap: 1rem; align-items: center; height: 35px;">
+                        <label style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; cursor: pointer;">
+                            <input type="checkbox" id="chart-show-active" checked> Alunos
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; cursor: pointer;">
+                            <input type="checkbox" id="chart-show-attendance" checked> Frequência
+                        </label>
+                    </div>
+                </div>
+            </div>
+
             <div style="height: 250px; width: 100%;">
                 <canvas id="activeStudentsChart"></canvas>
             </div>
@@ -500,20 +532,30 @@
 <script>
 let currentBeltData = { rank: '', color: '', req: '', syllabus: '' };
 
-// Inicializar Gráfico de Alunos Ativos
-document.addEventListener('DOMContentLoaded', function() {
-    const canvas = document.getElementById('activeStudentsChart');
-    if (canvas) {
-        const ctx = canvas.getContext('2d');
-        const chartData = {{ chart_data|tojson|safe if chart_data else '{"labels": [], "values": []}' }};
-        
-        new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: chartData.labels,
-                datasets: [{
-                    label: 'Alunos Ativos',
-                    data: chartData.values,
+let myChart = null;
+
+function loadChartData() {
+    const dojoId = document.getElementById('chart-dojo-filter').value;
+    const startDate = document.getElementById('chart-start-month').value;
+    const endDate = document.getElementById('chart-end-month').value;
+    
+    const showActive = document.getElementById('chart-show-active').checked;
+    const showAttendance = document.getElementById('chart-show-attendance').checked;
+
+    let url = '/api/dashboard/chart-data?';
+    if (dojoId) url += 'dojo_id=' + dojoId + '&';
+    if (startDate) url += 'start_date=' + startDate + '&';
+    if (endDate) url += 'end_date=' + endDate;
+
+    fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            const datasets = [];
+            
+            if (showActive) {
+                datasets.push({
+                    label: 'Alunos Únicos (Presença)',
+                    data: data.active_users,
                     borderColor: '#38bdf8',
                     backgroundColor: 'rgba(56, 189, 248, 0.3)',
                     borderWidth: 3,
@@ -523,47 +565,103 @@ document.addEventListener('DOMContentLoaded', function() {
                     pointBorderColor: '#fff',
                     pointRadius: 5,
                     pointHoverRadius: 7
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: false
-                    },
-                    tooltip: {
-                        backgroundColor: 'rgba(15, 23, 42, 0.9)',
-                        titleColor: '#fff',
-                        bodyColor: '#38bdf8',
-                        borderColor: '#38bdf8',
-                        borderWidth: 1,
-                        padding: 10,
-                        displayColors: false
-                    }
+                });
+            }
+            
+            if (showAttendance) {
+                datasets.push({
+                    label: 'Frequência Mensal (Presenças Totais)',
+                    data: data.attendances,
+                    borderColor: '#10b981',
+                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4,
+                    pointBackgroundColor: '#10b981',
+                    pointBorderColor: '#fff',
+                    pointRadius: 5,
+                    pointHoverRadius: 7
+                });
+            }
+
+            const canvas = document.getElementById('activeStudentsChart');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            
+            if (myChart) {
+                myChart.destroy();
+            }
+            
+            myChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.labels,
+                    datasets: datasets
                 },
-                scales: {
-                    y: {
-                        beginAtZero: false,
-                        grid: {
-                            color: 'rgba(255, 255, 255, 0.05)'
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            labels: { color: 'rgba(255,255,255,0.7)' }
                         },
-                        ticks: {
-                            color: 'var(--text-muted)'
+                        tooltip: {
+                            backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                            titleColor: '#fff',
+                            bodyColor: '#fff',
+                            borderColor: 'rgba(255,255,255,0.1)',
+                            borderWidth: 1,
+                            padding: 10,
+                            displayColors: true
                         }
                     },
-                    x: {
-                        grid: {
-                            display: false
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.05)'
+                            },
+                            ticks: {
+                                color: 'var(--text-muted)'
+                            }
                         },
-                        ticks: {
-                            color: 'var(--text-muted)'
+                        x: {
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                color: 'var(--text-muted)'
+                            }
                         }
                     }
                 }
-            }
+            });
         });
-    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Set default months
+    const today = new Date();
+    let endMonth = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0');
+    
+    let d = new Date();
+    d.setMonth(d.getMonth() - 5);
+    let startMonth = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+    
+    const endInput = document.getElementById('chart-end-month');
+    const startInput = document.getElementById('chart-start-month');
+    if (endInput) endInput.value = endMonth;
+    if (startInput) startInput.value = startMonth;
+
+    loadChartData();
+    
+    // Add event listeners
+    const filters = ['chart-dojo-filter', 'chart-start-month', 'chart-end-month', 'chart-show-active', 'chart-show-attendance'];
+    filters.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('change', loadChartData);
+    });
 });
 
 

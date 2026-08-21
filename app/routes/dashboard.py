@@ -10,11 +10,81 @@ from app.models import Dojo, User, GuestApproval, Classified, Event
 
 from app.utils import get_required_attendances
 from app.version import VERSION
+from app.models import ClassSession, Attendance
+from sqlalchemy import func
 
 router = APIRouter()
 templates = Jinja2Templates(directory=os.path.join(os.path.dirname(os.path.dirname(__file__)), "templates"))
 templates.env.filters["req_attendances"] = get_required_attendances
 templates.env.globals["system_version"] = VERSION
+
+@router.get("/api/dashboard/chart-data")
+def get_chart_data(start_date: str = None, end_date: str = None, dojo_id: int = None, db: Session = Depends(get_db)):
+    # Default to last 6 months if no dates provided
+    if not end_date:
+        end_date = datetime.date.today().strftime("%Y-%m")
+    if not start_date:
+        start_date_obj = datetime.date.today().replace(day=1)
+        for _ in range(5):
+            start_date_obj = (start_date_obj - datetime.timedelta(days=1)).replace(day=1)
+        start_date = start_date_obj.strftime("%Y-%m")
+        
+    # We will fetch all attendances joined with sessions in the date range
+    query = db.query(ClassSession.date, Attendance.user_id)\
+              .join(Attendance, ClassSession.id == Attendance.session_id)\
+              .filter(ClassSession.date >= f"{start_date}-01")\
+              .filter(ClassSession.date <= f"{end_date}-31")
+              
+    if dojo_id:
+        query = query.filter(ClassSession.dojo_id == dojo_id)
+        
+    records = query.all()
+    
+    # Group by YYYY-MM
+    data_by_month = {}
+    for r in records:
+        month_str = r[0][:7] # Extract YYYY-MM
+        user_id = r[1]
+        if month_str not in data_by_month:
+            data_by_month[month_str] = {"attendances": 0, "users": set()}
+        data_by_month[month_str]["attendances"] += 1
+        data_by_month[month_str]["users"].add(user_id)
+        
+    # Generate labels from start_date to end_date
+    labels = []
+    attendances_values = []
+    active_users_values = []
+    
+    # Simple iteration by month
+    current_date = datetime.datetime.strptime(f"{start_date}-01", "%Y-%m-%d").date()
+    end_date_obj = datetime.datetime.strptime(f"{end_date}-01", "%Y-%m-%d").date()
+    
+    while current_date <= end_date_obj:
+        month_str = current_date.strftime("%Y-%m")
+        
+        # Format label (e.g., "Jan/2023")
+        months_pt = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
+        label = f"{months_pt[current_date.month - 1]}/{current_date.year}"
+        labels.append(label)
+        
+        if month_str in data_by_month:
+            attendances_values.append(data_by_month[month_str]["attendances"])
+            active_users_values.append(len(data_by_month[month_str]["users"]))
+        else:
+            attendances_values.append(0)
+            active_users_values.append(0)
+            
+        # Increment month
+        if current_date.month == 12:
+            current_date = current_date.replace(year=current_date.year + 1, month=1)
+        else:
+            current_date = current_date.replace(month=current_date.month + 1)
+            
+    return {
+        "labels": labels,
+        "attendances": attendances_values,
+        "active_users": active_users_values
+    }
 
 @router.get("/")
 def dashboard_page(request: Request, db: Session = Depends(get_db)):

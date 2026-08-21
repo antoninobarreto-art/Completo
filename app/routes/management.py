@@ -249,6 +249,11 @@ async def update_dojo(
     if not dojo:
         return JSONResponse({"error": "Dojo não encontrado"}, status_code=404)
 
+    if current_user.get("role") == "SENSEI":
+        current_id = int(current_user.get("sub"))
+        if dojo.responsible_sensei_id != current_id:
+            raise HTTPException(status_code=403, detail="Acesso negado. Você só pode editar o seu próprio Dojo.")
+
     dojo.name = name
     dojo.academy = academy
     dojo.address = address
@@ -310,6 +315,11 @@ def delete_dojo(dojo_id: int, request: Request, db: Session = Depends(get_db)):
     dojo = db.query(Dojo).filter(Dojo.id == dojo_id).first()
     if not dojo:
         return JSONResponse({"error": "Dojo não encontrado"}, status_code=404)
+
+    if current_user.get("role") == "SENSEI":
+        current_id = int(current_user.get("sub"))
+        if dojo.responsible_sensei_id != current_id:
+            return JSONResponse({"error": "Acesso negado. Você só pode excluir o seu próprio Dojo."}, status_code=403)
 
     try:
         # 1. Desvincular membros do dojo antes da exclusão

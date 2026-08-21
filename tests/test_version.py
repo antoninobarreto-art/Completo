@@ -4,6 +4,10 @@ DOJOCHO - Testes de Integridade e Automação do Sistema de Versionamento
 
 import subprocess
 import sys
+import os
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 from fastapi.testclient import TestClient
 from app.main import app
 from app.version import VERSION, get_version_info, validate_db_schema_version

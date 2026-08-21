@@ -97,6 +97,8 @@ rever as fichas de novos alunos do kuramadera - ok
 Dominio dojocho.com.br - ok
 v2.3.1 - on
 Mobile e Financeiro - ok
+Lista de aniversariantes - ok
+Gráfico de inscritos - ok
 
 Sugestões Marcelo Britto
 

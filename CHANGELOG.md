@@ -5,6 +5,22 @@ Todas as alterações notáveis neste projeto serão documentadas neste arquivo.
 O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/),
 e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
+## [2.4.0] - 2026-08-21
+
+### Adicionado
+- **Gráfico Dinâmico de Duas Curvas no Dashboard**: Implementada rota `/api/dashboard/chart-data` para exibir simultaneamente o número de **Alunos Únicos (Ativos)** e a **Frequência Mensal (Presenças Totais)**.
+- **Filtros Interativos no Gráfico**: Adicionados seletores de Dojo, período (mês inicial e final) e checkboxes para alternar a exibição das métricas em tempo real via AJAX.
+- **Importação e Reconciliação em Lote de Alunos**: Script de automação para importar e cruzar 266 registros de alunos da planilha `Alunos Dojoweb.xlsx`, cadastrando alunos novos e vinculando-os automaticamente aos seus Dojos e Senseis correspondentes.
+
+### Alterado / Refatorado
+- **Restrição de Permissões de Dojo para Senseis**: Bloqueada a edição e exclusão de Dojos para Senseis que não sejam o responsável legal daquele Dojo específico.
+- **Remoção de Ícone de Ajuda do Gráfico**: Retirado o ícone de dúvida/tooltip estático do cabeçalho do gráfico.
+
+### Corrigido
+- **Correção da Flag de Alunos Ativos**: Ajustada a lógica de parsing da coluna de status para evitar falso-positivo com a string "Inativo" contendo o termo "ativo".
+
+---
+
 ## [2.3.3] - 2026-08-20
 
 ### Adicionado
